@@ -39,28 +39,40 @@ export class BinsController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post()
-  createBin(@Request() req, @Body() dto: CreateBinDto) {
+  async createBin(@Request() req, @Body() dto: CreateBinDto) {
     if (req.user.role !== 'SUPERADMIN') {
       throw new UnauthorizedException('Only SuperAdmins can create bins');
     }
-    return this.binsService.create(dto);
+    const bin = await this.binsService.create(dto);
+    return {
+      message: 'Bin created successfully',
+      data: bin,
+    };
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
-  updateBin(@Request() req, @Param('id') id: string, @Body() dto: any) {
+  async updateBin(@Request() req, @Param('id') id: string, @Body() dto: any) {
     if (req.user.role !== 'SUPERADMIN') {
       throw new UnauthorizedException('Only SuperAdmins can update bins');
     }
-    return this.binsService.update(id, dto);
+    const bin = await this.binsService.update(id, dto);
+    return {
+      message: 'Bin updated successfully',
+      data: bin,
+    };
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Delete(':id')
-  deleteBin(@Request() req, @Param('id') id: string) {
+  async deleteBin(@Request() req, @Param('id') id: string) {
     if (req.user.role !== 'SUPERADMIN') {
       throw new UnauthorizedException('Only SuperAdmins can delete bins');
     }
-    return this.binsService.delete(id);
+    const bin = await this.binsService.delete(id);
+    return {
+      message: 'Bin deleted successfully',
+      data: bin,
+    };
   }
 }

@@ -3,6 +3,7 @@ import {
   Injectable,
   Inject,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -11,6 +12,8 @@ import { TasksService } from 'src/task/task.service';
 
 @Injectable()
 export class BinsService {
+  private readonly logger = new Logger(BinsService.name);
+
   constructor(
     @InjectModel('Bin') private binModel: Model<Bin>,
     @Inject(forwardRef(() => TasksService))
@@ -29,12 +32,26 @@ export class BinsService {
     return this.binModel.find().exec();
   }
 
+  async findById(id: string) {
+    return this.binModel.findById(id);
+  }
+
   async update(id: string, dto: any) {
-    return this.binModel.findByIdAndUpdate(id, dto, { new: true });
+    const result = await this.binModel.findByIdAndUpdate(id, dto, {
+      new: true,
+    });
+    if (!result) {
+      throw new NotFoundException(`Bin with ID ${id} not found`);
+    }
+    return result;
   }
 
   async delete(id: string) {
-    return this.binModel.findByIdAndDelete(id);
+    const result = await this.binModel.findByIdAndDelete(id);
+    if (!result) {
+      throw new NotFoundException(`Bin with ID ${id} not found`);
+    }
+    return result;
   }
 
   async clearBinTask(binId: string) {
@@ -46,6 +63,7 @@ export class BinsService {
     const bin = await this.binModel.findOne({ binCode });
     if (!bin) throw new NotFoundException('Bin not found');
 
+    this.logger.log(`Updating bin ${binCode}: fillLevel = ${fillLevel}`);
     bin.fillLevel = fillLevel;
 
     // Determine Status
@@ -57,17 +75,26 @@ export class BinsService {
 
     // TRIGGER ALERT if Full
     if (bin.status === 'FULL') {
+      this.logger.log(`Bin ${binCode} is FULL. Creating task...`);
       // Check if there is already an active task so we don't spam
-      // (You would typically check bin.lastTaskId here)
       if (!bin.lastTaskId) {
-        const newTask = await this.tasksService.assignTaskToRandomCleaner(
-          bin._id.toString(),
-          bin.area,
-        );
-        if (newTask) {
-          bin.lastTaskId = newTask._id.toString();
-          await bin.save();
+        try {
+          const newTask = await this.tasksService.assignTaskToRandomCleaner(
+            bin._id.toString(),
+            bin.area,
+          );
+          if (newTask) {
+            this.logger.log(`Task created: ${newTask._id}`);
+            bin.lastTaskId = newTask._id.toString();
+            await bin.save();
+          } else {
+            this.logger.warn(`No task created for bin ${binCode}`);
+          }
+        } catch (error) {
+          this.logger.error(`Error creating task for bin ${binCode}:`, error);
         }
+      } else {
+        this.logger.log(`Bin ${binCode} already has an active task. Skipping.`);
       }
     }
 

@@ -36,7 +36,12 @@ export class SuperadminService {
     };
   }
 
-  //   --- 2. Create Admin User
+  //   --- Get All Admin Users
+  async getAllAdmins() {
+    return this.adminModel.find().exec();
+  }
+
+  //   --- Create Admin User
   async createAdmin(dto: any) {
     const { name, email, password, area } = dto;
 
@@ -57,5 +62,52 @@ export class SuperadminService {
       message: 'Admin created successfully',
       admin: await newAdmin.save(),
     };
+  }
+
+  //   --- Delete Admin User
+  async deleteAdmin(id: string) {
+    return this.adminModel.findByIdAndDelete(id).exec();
+  }
+
+  //   --- Update Admin User
+  async updateAdmin(id: string, dto: any) {
+    return this.adminModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+  }
+
+  //  --- Get All Cleaner Users
+  async getAllCleaners() {
+    return this.cleanerModel.find().exec();
+  }
+
+  // --- Create Cleaner User
+  async createCleaner(dto: any) {
+    const { name, telegramChatId, area } = dto;
+
+    const existing = await this.cleanerModel.findOne({ telegramChatId });
+    if (existing)
+      throw new BadRequestException(
+        'Cleaner with this Telegram ID already exists',
+      );
+
+    const newCleaner = new this.cleanerModel({
+      name,
+      telegramChatId,
+      area,
+      role: 'CLEANER',
+    });
+    return {
+      message: 'Cleaner created successfully',
+      cleaner: await newCleaner.save(),
+    };
+  }
+
+  //   --- Delete Cleaner User
+  async deleteCleaner(id: string) {
+    return this.cleanerModel.findByIdAndDelete(id).exec();
+  }
+
+  //   --- Update Cleaner User
+  async updateCleaner(id: string, dto: any) {
+    return this.cleanerModel.findByIdAndUpdate(id, dto, { new: true }).exec();
   }
 }
