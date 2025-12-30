@@ -6,6 +6,7 @@ import {
   UseGuards,
   Body,
   Delete,
+  Param,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SuperadminService } from './superadmin.service';
@@ -30,6 +31,16 @@ export class SuperAdminController {
     return this.superadminService.createAdmin(dto);
   }
 
+  @Patch('/update-admin/:id')
+  async updateAdmin(@Param('id') id: string, @Body() dto: any) {
+    return this.superadminService.updateAdmin(id, dto);
+  }
+
+  @Delete('/delete-admin/:id')
+  async deleteAdmin(@Param('id') id: string) {
+    return this.superadminService.deleteAdmin(id);
+  }
+
   @Get('/cleaners')
   async getAllCleaners() {
     return this.superadminService.getAllCleaners();
@@ -40,8 +51,13 @@ export class SuperAdminController {
     return this.superadminService.createCleaner(dto);
   }
 
+  @Patch('/update-cleaner/:id')
+  async updateCleaner(@Param('id') id: string, @Body() dto: any) {
+    return this.superadminService.updateCleaner(id, dto);
+  }
+
   @Delete('/delete-cleaner/:id')
-  async deleteCleaner(@Body() id: string) {
+  async deleteCleaner(@Param('id') id: string) {
     return this.superadminService.deleteCleaner(id);
   }
 }

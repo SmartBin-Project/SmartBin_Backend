@@ -11,6 +11,12 @@ export class Cleaner extends Document {
 
   @Prop({ required: true })
   area: string;
+
+  @Prop({ default: 0 })
+  acceptCount: number;
+
+  @Prop({ default: 0 })
+  rejectCount: number;
 }
 
 export const CleanerSchema = SchemaFactory.createForClass(Cleaner);

@@ -10,13 +10,15 @@ export class Task extends Document {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'Cleaner',
-    required: true,
+    required: false,
+    default: null,
+    sparse: true,
   })
-  assignedCleanerId: string;
+  assignedCleanerId: string | null;
 
   @Prop({
     type: String,
-    enum: ['PENDING', 'NOTIFIED', 'REJECTED', 'ACCEPTED', 'COMPLETED'],
+    enum: ['PENDING', 'REJECTED', 'ACCEPTED', 'COMPLETED'],
     default: 'PENDING',
   })
   status: string;
@@ -36,8 +38,8 @@ export class Task extends Document {
   @Prop({ default: 0 })
   rejectionCount: number;
 
-  @Prop({ type: String, default: null })
-  proofImage: string | null;
+  @Prop({ type: [String], default: [] })
+  rejectedBy: string[];
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);

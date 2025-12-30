@@ -98,6 +98,15 @@ export class BinsService {
       }
     }
 
+    // AUTO-CLEAR TASK when bin is emptied
+    if (bin.status === 'EMPTY' && bin.lastTaskId) {
+      this.logger.log(
+        `Bin ${binCode} is now EMPTY. Clearing active task ${bin.lastTaskId}`,
+      );
+      bin.lastTaskId = null;
+      await bin.save();
+    }
+
     return bin;
   }
 

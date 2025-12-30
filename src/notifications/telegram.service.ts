@@ -58,15 +58,27 @@ export class TelegramService implements OnModuleInit {
           );
         } else if (action === 'busy') {
           // We pass the cleanerId (from telegram user id) and taskId for identification
-          await this.tasksService.rejectTask(taskId);
+          const result = await this.tasksService.rejectTask(taskId);
 
-          await this.bot.editMessageText(
-            `❌ Task Rejected. Searching for another cleaner...`,
-            {
-              chat_id: chatId,
-              message_id: message.message_id,
-            },
-          );
+          if (result) {
+            // Task was reassigned to another cleaner
+            await this.bot.editMessageText(
+              `❌ Task Rejected. Searching for another cleaner...`,
+              {
+                chat_id: chatId,
+                message_id: message.message_id,
+              },
+            );
+          } else {
+            // No more cleaners available
+            await this.bot.editMessageText(
+              `❌ Task Rejected. No other cleaners available. Admin will be notified.`,
+              {
+                chat_id: chatId,
+                message_id: message.message_id,
+              },
+            );
+          }
         }
       } catch (error) {
         this.logger.error('Error handling telegram button', error);

@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Admin } from 'src/schema/admin.schema';
 import { Bin } from 'src/schema/bin.schema';
@@ -43,7 +48,7 @@ export class SuperadminService {
 
   //   --- Create Admin User
   async createAdmin(dto: any) {
-    const { name, email, password, area } = dto;
+    const { username, email, password, area } = dto;
 
     const existing = await this.adminModel.findOne({ email });
     if (existing)
@@ -52,7 +57,7 @@ export class SuperadminService {
     const hashPassword = await bcrypt.hash(password, 10);
 
     const newAdmin = new this.adminModel({
-      name,
+      username,
       email,
       password: hashPassword,
       area,
@@ -66,12 +71,22 @@ export class SuperadminService {
 
   //   --- Delete Admin User
   async deleteAdmin(id: string) {
-    return this.adminModel.findByIdAndDelete(id).exec();
+    return {
+      message: 'Admin deleted successfully',
+      admin: await this.adminModel.findByIdAndDelete(id).exec(),
+    };
   }
 
   //   --- Update Admin User
   async updateAdmin(id: string, dto: any) {
-    return this.adminModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+    return {
+      message: 'Admin updated successfully',
+      admin: await this.adminModel
+        .findByIdAndUpdate(id, dto, {
+          new: true,
+        })
+        .exec(),
+    };
   }
 
   //  --- Get All Cleaner Users
@@ -103,11 +118,31 @@ export class SuperadminService {
 
   //   --- Delete Cleaner User
   async deleteCleaner(id: string) {
-    return this.cleanerModel.findByIdAndDelete(id).exec();
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid cleaner ID format');
+    }
+
+    const cleaner = await this.cleanerModel.findByIdAndDelete(id).exec();
+
+    if (!cleaner) {
+      throw new NotFoundException('Cleaner not found');
+    }
+
+    return {
+      message: 'Cleaner deleted successfully',
+      cleaner,
+    };
   }
 
   //   --- Update Cleaner User
   async updateCleaner(id: string, dto: any) {
-    return this.cleanerModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+    return {
+      message: 'Cleaner updated successfully',
+      cleaner: await this.cleanerModel
+        .findByIdAndUpdate(id, dto, {
+          new: true,
+        })
+        .exec(),
+    };
   }
 }

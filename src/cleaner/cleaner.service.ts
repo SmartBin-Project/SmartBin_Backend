@@ -11,4 +11,20 @@ export class CleanerService {
   async findAll(area: string): Promise<Cleaner[]> {
     return this.cleanerModel.find({ area });
   }
+
+  async incrementAcceptCount(cleanerId: string): Promise<Cleaner | null> {
+    return this.cleanerModel.findByIdAndUpdate(
+      cleanerId,
+      { $inc: { acceptCount: 1 } },
+      { new: true },
+    );
+  }
+
+  async incrementRejectCount(cleanerId: string): Promise<Cleaner | null> {
+    return this.cleanerModel.findByIdAndUpdate(
+      cleanerId,
+      { $inc: { rejectCount: 1 } },
+      { new: true },
+    );
+  }
 }
