@@ -19,7 +19,6 @@ export class BinsController {
   constructor(private readonly binsService: BinsService) {}
   // NOTE: We do NOT use @UseGuards('jwt') here because the ESP32
   // usually cannot login. Later, we can add a simple API Key check.
-
   @Post('update-level')
   updateLevel(@Body() body: { binCode: string; fillLevel: number }) {
     return this.binsService.updateFillLevel(body.binCode, body.fillLevel);
@@ -28,6 +27,12 @@ export class BinsController {
   @Post('update-location')
   updateLocation(@Body() body: { binCode: string; lat: number; lng: number }) {
     return this.binsService.updateLocation(body.binCode, body.lat, body.lng);
+  }
+
+  // Public endpoint - no auth required
+  @Get('public')
+  getPublicBins() {
+    return this.binsService.findAllPublic();
   }
 
   // Everyone (Admins/Cleaners) can SEE the bins

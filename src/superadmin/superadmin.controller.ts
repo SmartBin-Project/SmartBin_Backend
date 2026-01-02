@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SuperadminService } from './superadmin.service';
+import { CreateAdminDto } from './dto/create-admin.dto';
+import { CreateCleanerDto } from './dto/create-cleaner.dto';
 
 @Controller('superadmin')
 @UseGuards(AuthGuard('jwt'))
@@ -27,12 +29,12 @@ export class SuperAdminController {
   }
 
   @Post('/create-admin')
-  async createAdmin(@Body() dto: any) {
+  async createAdmin(@Body() dto: CreateAdminDto) {
     return this.superadminService.createAdmin(dto);
   }
 
   @Patch('/update-admin/:id')
-  async updateAdmin(@Param('id') id: string, @Body() dto: any) {
+  async updateAdmin(@Param('id') id: string, @Body() dto: CreateAdminDto) {
     return this.superadminService.updateAdmin(id, dto);
   }
 
@@ -47,12 +49,12 @@ export class SuperAdminController {
   }
 
   @Post('/create-cleaner')
-  async createCleaner(@Body() dto: any) {
+  async createCleaner(@Body() dto: CreateCleanerDto) {
     return this.superadminService.createCleaner(dto);
   }
 
   @Patch('/update-cleaner/:id')
-  async updateCleaner(@Param('id') id: string, @Body() dto: any) {
+  async updateCleaner(@Param('id') id: string, @Body() dto: CreateCleanerDto) {
     return this.superadminService.updateCleaner(id, dto);
   }
 

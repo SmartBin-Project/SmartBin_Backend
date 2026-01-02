@@ -26,4 +26,9 @@ export class AuthController {
   async resetPassword(@Body() dto: ResetPasswordDTO) {
     return this.authService.resetPassword(dto);
   }
+
+  @Post('logout')
+  async logout() {
+    return this.authService.logout();
+  }
 }

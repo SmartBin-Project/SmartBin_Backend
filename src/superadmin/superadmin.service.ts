@@ -11,6 +11,8 @@ import { Admin } from 'src/schema/admin.schema';
 import { Bin } from 'src/schema/bin.schema';
 import { Task } from 'src/schema/task.schema';
 import { Cleaner } from 'src/schema/cleaner.schema';
+import { CreateAdminDto } from './dto/create-admin.dto';
+import { CreateCleanerDto } from './dto/create-cleaner.dto';
 @Injectable()
 export class SuperadminService {
   constructor(
@@ -47,7 +49,7 @@ export class SuperadminService {
   }
 
   //   --- Create Admin User
-  async createAdmin(dto: any) {
+  async createAdmin(dto: CreateAdminDto) {
     const { username, email, password, area } = dto;
 
     const existing = await this.adminModel.findOne({ email });
@@ -78,7 +80,7 @@ export class SuperadminService {
   }
 
   //   --- Update Admin User
-  async updateAdmin(id: string, dto: any) {
+  async updateAdmin(id: string, dto: CreateAdminDto) {
     return {
       message: 'Admin updated successfully',
       admin: await this.adminModel
@@ -95,7 +97,7 @@ export class SuperadminService {
   }
 
   // --- Create Cleaner User
-  async createCleaner(dto: any) {
+  async createCleaner(dto: CreateCleanerDto) {
     const { name, telegramChatId, area } = dto;
 
     const existing = await this.cleanerModel.findOne({ telegramChatId });
@@ -135,7 +137,7 @@ export class SuperadminService {
   }
 
   //   --- Update Cleaner User
-  async updateCleaner(id: string, dto: any) {
+  async updateCleaner(id: string, dto: CreateCleanerDto) {
     return {
       message: 'Cleaner updated successfully',
       cleaner: await this.cleanerModel

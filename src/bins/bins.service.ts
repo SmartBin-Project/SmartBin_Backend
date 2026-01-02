@@ -32,6 +32,13 @@ export class BinsService {
     return this.binModel.find().exec();
   }
 
+  async findAllPublic() {
+    return this.binModel
+      .find()
+      .select('binCode location fillLevel status')
+      .exec();
+  }
+
   async findById(id: string) {
     return this.binModel.findById(id);
   }

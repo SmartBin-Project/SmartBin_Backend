@@ -148,4 +148,13 @@ export class AuthService {
 
     return { message: 'Password updated successfully' };
   }
+
+  //-----------------------------------------
+  // LOGOUT
+  //-----------------------------------------
+  async logout() {
+    // Logout is stateless in JWT - just clear client-side
+    // In a more advanced setup, you could blacklist the token here
+    return { message: 'Logout successful' };
+  }
 }
