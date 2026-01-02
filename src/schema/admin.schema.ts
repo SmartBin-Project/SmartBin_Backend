@@ -17,6 +17,27 @@ export class Admin extends Document {
 
   @Prop({ required: true })
   area: string;
+
+  @Prop({ default: null })
+  firstName: string;
+
+  @Prop({ default: null })
+  lastName: string;
+
+  @Prop({ default: null })
+  gender: string;
+
+  @Prop({ default: null })
+  phone: string;
+
+  @Prop({ default: null })
+  dateOfBirth: string;
+
+  @Prop({ default: null })
+  address: string;
+
+  @Prop({ default: null })
+  profilePic: string;
 }
 
 export const AdminSchema = SchemaFactory.createForClass(Admin);

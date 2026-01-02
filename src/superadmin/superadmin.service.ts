@@ -12,17 +12,75 @@ import { Bin } from 'src/schema/bin.schema';
 import { Task } from 'src/schema/task.schema';
 import { Cleaner } from 'src/schema/cleaner.schema';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CreateCleanerDto } from './dto/create-cleaner.dto';
 @Injectable()
 export class SuperadminService {
   constructor(
     @InjectModel('Admin') private adminModel: Model<Admin>,
+    @InjectModel('SuperAdmin') private superAdminModel: Model<any>,
     @InjectModel('Bin') private binModel: Model<Bin>,
     @InjectModel('Task') private taskModel: Model<Task>,
     @InjectModel('Cleaner') private cleanerModel: Model<Cleaner>,
   ) {}
 
-  // --- 1. Dashboard Stats
+  // --- Get User Profile
+  async getProfile(userId: string) {
+    // Try to find in Admin first
+    let user = await this.adminModel.findById(userId).exec();
+
+    // If not found in Admin, try SuperAdmin
+    if (!user) {
+      user = await this.superAdminModel.findById(userId).exec();
+    }
+
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  // --- Update User Profile
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    // Try to find in Admin first
+    let user = await this.adminModel.findById(userId).exec();
+    let isAdmin = true;
+
+    // If not found in Admin, try SuperAdmin
+    if (!user) {
+      user = await this.superAdminModel.findById(userId).exec();
+      isAdmin = false;
+    }
+
+    if (!user) throw new NotFoundException('User not found');
+
+    // Only update allowed profile fields (not password, email, or role)
+    const updateData = {
+      firstName: dto.firstName || user.firstName,
+      lastName: dto.lastName || user.lastName,
+      gender: dto.gender || user.gender,
+      phone: dto.phone || user.phone,
+      dateOfBirth: dto.dateOfBirth || user.dateOfBirth,
+      address: dto.address || user.address,
+      profilePic: dto.profilePic || user.profilePic,
+    };
+
+    let updatedUser;
+    if (isAdmin) {
+      updatedUser = await this.adminModel
+        .findByIdAndUpdate(userId, updateData, { new: true })
+        .exec();
+    } else {
+      updatedUser = await this.superAdminModel
+        .findByIdAndUpdate(userId, updateData, { new: true })
+        .exec();
+    }
+
+    return {
+      message: 'Profile updated successfully',
+      user: updatedUser,
+    };
+  }
+
+  // --- Dashboard Stats
   async getDashboardStats() {
     const totalBins = await this.binModel.countDocuments();
     const fullBins = await this.binModel.countDocuments({ status: 'FULL' });

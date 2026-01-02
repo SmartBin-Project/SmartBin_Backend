@@ -14,6 +14,27 @@ export class SuperAdmin extends Document {
 
   @Prop({ default: 'SUPERADMIN' })
   role: string;
+
+  @Prop({ default: null })
+  firstName: string;
+
+  @Prop({ default: null })
+  lastName: string;
+
+  @Prop({ default: null })
+  gender: string;
+
+  @Prop({ default: null })
+  phone: string;
+
+  @Prop({ default: null })
+  dateOfBirth: string;
+
+  @Prop({ default: null })
+  address: string;
+
+  @Prop({ default: null })
+  profilePic: string;
 }
 
 export const SuperAdminSchema = SchemaFactory.createForClass(SuperAdmin);

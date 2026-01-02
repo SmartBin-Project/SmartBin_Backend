@@ -7,16 +7,28 @@ import {
   Body,
   Delete,
   Param,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SuperadminService } from './superadmin.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { CreateCleanerDto } from './dto/create-cleaner.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('superadmin')
 @UseGuards(AuthGuard('jwt'))
 export class SuperAdminController {
   constructor(private readonly superadminService: SuperadminService) {}
+
+  @Get('/profile')
+  async getProfile(@Request() req) {
+    return this.superadminService.getProfile(req.user.userId);
+  }
+
+  @Patch('/profile')
+  async updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
+    return this.superadminService.updateProfile(req.user.userId, dto);
+  }
 
   @Get('/dashboard')
   async getDashboard() {
