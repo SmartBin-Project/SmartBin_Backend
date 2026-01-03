@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { BinsService } from './bins.service';
 import { AuthGuard } from '@nestjs/passport';
-import { CreateBinDto } from './ dto/create-bin.dto'; // Make sure you created this DTO
+import { CreateBinDto } from './dto/create-bin.dto';
 
 @Controller('bins')
 export class BinsController {
@@ -42,17 +42,16 @@ export class BinsController {
     return this.binsService.findAll();
   }
 
+  @Post('create-bin')
   @UseGuards(AuthGuard('jwt'))
-  @Post()
-  async createBin(@Request() req, @Body() dto: CreateBinDto) {
+  createBin(@Request() req, @Body() dto: CreateBinDto) {
     if (req.user.role !== 'SUPERADMIN') {
       throw new UnauthorizedException('Only SuperAdmins can create bins');
     }
-    const bin = await this.binsService.create(dto);
-    return {
+    return this.binsService.create(dto).then((bin) => ({
       message: 'Bin created successfully',
       data: bin,
-    };
+    }));
   }
 
   @UseGuards(AuthGuard('jwt'))
