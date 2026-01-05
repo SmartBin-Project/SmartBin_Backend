@@ -33,6 +33,9 @@ export class Bin extends Document {
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Task', default: null })
   lastTaskId: string | null;
+
+  @Prop({ default: 0 })
+  fullCount: number;
 }
 
 export const BinSchema = SchemaFactory.createForClass(Bin);
