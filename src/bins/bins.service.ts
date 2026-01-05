@@ -29,14 +29,27 @@ export class BinsService {
   }
 
   async findAll() {
-    return this.binModel.find().exec();
+    const bins = await this.binModel
+      .find()
+      .select('_id binCode location area fillLevel status')
+      .lean()
+      .exec();
+    console.log(
+      '🔍 findAll result:',
+      bins.length > 0 ? JSON.stringify(bins[0]) : 'empty',
+    );
+    return bins;
   }
 
   async findAllPublic() {
-    return this.binModel
-      .find()
-      .select('binCode location fillLevel status')
-      .exec();
+    const bins = await this.binModel.find().lean().exec();
+    console.log(
+      '🔍 RAW findAllPublic - ALL FIELDS:',
+      JSON.stringify(bins[0], null, 2),
+    );
+    console.log('🔍 Bin keys:', Object.keys(bins[0]));
+    console.log('🔍 Area value:', bins[0].area);
+    return bins;
   }
 
   async findById(id: string) {
@@ -66,19 +79,18 @@ export class BinsService {
   }
 
   // --- HARDWARE UPDATE ---
-  async updateFillLevel(binCode: string, fillLevel: number) {
+  async updateFillLevel(binCode: string, fillLevel: number, area: string) {
     const bin = await this.binModel.findOne({ binCode });
     if (!bin) throw new NotFoundException('Bin not found');
 
     this.logger.log(`Updating bin ${binCode}: fillLevel = ${fillLevel}`);
     bin.fillLevel = fillLevel;
+    bin.area = area;
 
     // Determine Status
     if (fillLevel >= 90) bin.status = 'FULL';
     else if (fillLevel >= 50) bin.status = 'HALF';
     else bin.status = 'EMPTY';
-
-    await bin.save();
 
     // TRIGGER ALERT if Full
     if (bin.status === 'FULL') {
@@ -93,7 +105,6 @@ export class BinsService {
           if (newTask) {
             this.logger.log(`Task created: ${newTask._id}`);
             bin.lastTaskId = newTask._id.toString();
-            await bin.save();
           } else {
             this.logger.warn(`No task created for bin ${binCode}`);
           }
@@ -111,9 +122,9 @@ export class BinsService {
         `Bin ${binCode} is now EMPTY. Clearing active task ${bin.lastTaskId}`,
       );
       bin.lastTaskId = null;
-      await bin.save();
     }
 
+    await bin.save();
     return bin;
   }
 
@@ -123,5 +134,54 @@ export class BinsService {
 
     bin.location = { lat, lng };
     return bin.save();
+  }
+
+  // Migration: Add area to bins that don't have it
+  async migrateAddAreas() {
+    const areaMap: { [key: string]: string } = {
+      SB1: 'Institute of Technology of Cambodia',
+      SMC1: 'Stueng meanchey',
+      R1: 'RUPP',
+      E1: 'Economica',
+    };
+
+    const result = await this.binModel.updateMany(
+      { area: { $exists: false } },
+      [
+        {
+          $set: {
+            area: {
+              $ifNull: [
+                '$area',
+                {
+                  $getField: {
+                    input: { $literal: areaMap },
+                    field: '$binCode',
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    );
+
+    // Fallback: Update any remaining bins without area
+    const binsWithoutArea = await this.binModel.find({
+      $or: [{ area: null }, { area: { $exists: false } }],
+    });
+    for (const bin of binsWithoutArea) {
+      bin.area = areaMap[bin.binCode] || 'Unknown Area';
+      await bin.save();
+    }
+
+    this.logger.log(
+      `Migration completed. Updated ${result.modifiedCount} bins`,
+    );
+    return {
+      message: 'Migration completed',
+      modifiedCount: result.modifiedCount,
+      fallbackUpdated: binsWithoutArea.length,
+    };
   }
 }
