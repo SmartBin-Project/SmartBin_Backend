@@ -19,14 +19,13 @@ export class BinsController {
   constructor(private readonly binsService: BinsService) {}
   // NOTE: We do NOT use @UseGuards('jwt') here because the ESP32
   // usually cannot login. Later, we can add a simple API Key check.
-  @Post('update-level')
+  @Patch('update-level')
   updateLevel(
-    @Body() body: { binCode: string; fillLevel: number; area: string },
+    @Body() body: { binCode: string; fillLevel: number},
   ) {
     return this.binsService.updateFillLevel(
       body.binCode,
       body.fillLevel,
-      body.area,
     );
   }
 

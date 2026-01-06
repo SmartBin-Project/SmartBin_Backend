@@ -32,7 +32,7 @@ export class BinsService {
     const bins = await this.binModel
       .find()
       .select('_id binCode location area fillLevel status fullCount')
-      .lean()
+     
       .exec();
     console.log(
       '🔍 findAll result:',
@@ -40,11 +40,14 @@ export class BinsService {
     );
     return bins;
   }
+  // async findAll() {
+  //   return this.binModel.find().exec();
+  // }
 
   async findAllPublic() {
     return this.binModel
       .find()
-      .select('binCode location fillLevel status fullCount')
+      .select('binCode location area fillLevel status fullCount')
       .exec();
   }
 
@@ -53,12 +56,32 @@ export class BinsService {
   }
 
   async update(id: string, dto: any) {
-    const result = await this.binModel.findByIdAndUpdate(id, dto, {
-      new: true,
-    });
-    if (!result) {
+    const bin = await this.findById(id);
+    if (!bin) {
       throw new NotFoundException(`Bin with ID ${id} not found`);
     }
+
+    const oldStatus = bin.status;
+    // Update bin properties from DTO
+    Object.assign(bin, dto);
+
+    // If fillLevel is being updated, recalculate status and fullCount
+    if (dto.fillLevel !== undefined) {
+      if (bin.fillLevel >= 90) {
+        bin.status = 'FULL';
+      } else if (bin.fillLevel >= 50) {
+        bin.status = 'HALF';
+      } else {
+        bin.status = 'EMPTY';
+      }
+
+      // If status changes to FULL, increment fullCount
+      if (bin.status === 'FULL' && oldStatus !== 'FULL') {
+        bin.fullCount = (bin.fullCount || 0) + 1;
+      }
+    }
+
+    const result = await bin.save();
     return result;
   }
 
@@ -75,14 +98,14 @@ export class BinsService {
   }
 
   // --- HARDWARE UPDATE ---
-  async updateFillLevel(binCode: string, fillLevel: number, area: string) {
+  async updateFillLevel(binCode: string, fillLevel: number) {
     const bin = await this.binModel.findOne({ binCode });
     if (!bin) throw new NotFoundException('Bin not found');
 
     this.logger.log(`Updating bin ${binCode}: fillLevel = ${fillLevel}`);
     const oldStatus = bin.status;
     bin.fillLevel = fillLevel;
-    bin.area = area;
+
 
     // Determine Status
     if (fillLevel >= 90) bin.status = 'FULL';
