@@ -42,14 +42,10 @@ export class BinsService {
   }
 
   async findAllPublic() {
-    const bins = await this.binModel.find().lean().exec();
-    console.log(
-      '🔍 RAW findAllPublic - ALL FIELDS:',
-      JSON.stringify(bins[0], null, 2),
-    );
-    console.log('🔍 Bin keys:', Object.keys(bins[0]));
-    console.log('🔍 Area value:', bins[0].area);
-    return bins;
+    return this.binModel
+      .find()
+      .select('binCode location fillLevel status fullCount')
+      .exec();
   }
 
   async findById(id: string) {
@@ -84,6 +80,7 @@ export class BinsService {
     if (!bin) throw new NotFoundException('Bin not found');
 
     this.logger.log(`Updating bin ${binCode}: fillLevel = ${fillLevel}`);
+    const oldStatus = bin.status;
     bin.fillLevel = fillLevel;
     bin.area = area;
 
@@ -91,6 +88,13 @@ export class BinsService {
     if (fillLevel >= 90) bin.status = 'FULL';
     else if (fillLevel >= 50) bin.status = 'HALF';
     else bin.status = 'EMPTY';
+
+    // If status changed to FULL, increment count
+    if (bin.status === 'FULL' && oldStatus !== 'FULL') {
+      bin.fullCount = (bin.fullCount || 0) + 1;
+    }
+
+    await bin.save();
 
     // TRIGGER ALERT if Full
     if (bin.status === 'FULL') {
