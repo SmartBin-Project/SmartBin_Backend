@@ -31,7 +31,7 @@ export class BinsService {
   async findAll() {
     const bins = await this.binModel
       .find()
-      .select('_id binCode location area fillLevel status')
+      .select('_id binCode location area fillLevel status fullCount')
       .lean()
       .exec();
     console.log(
