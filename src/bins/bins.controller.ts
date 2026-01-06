@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { BinsService } from './bins.service';
 import { AuthGuard } from '@nestjs/passport';
-import { CreateBinDto } from './ dto/create-bin.dto'; // Make sure you created this DTO
+import { CreateBinDto } from './dto/create-bin.dto';
 
 @Controller('bins')
 export class BinsController {
@@ -20,8 +20,14 @@ export class BinsController {
   // NOTE: We do NOT use @UseGuards('jwt') here because the ESP32
   // usually cannot login. Later, we can add a simple API Key check.
   @Post('update-level')
-  updateLevel(@Body() body: { binCode: string; fillLevel: number }) {
-    return this.binsService.updateFillLevel(body.binCode, body.fillLevel);
+  updateLevel(
+    @Body() body: { binCode: string; fillLevel: number; area: string },
+  ) {
+    return this.binsService.updateFillLevel(
+      body.binCode,
+      body.fillLevel,
+      body.area,
+    );
   }
 
   @Post('update-location')
@@ -29,10 +35,21 @@ export class BinsController {
     return this.binsService.updateLocation(body.binCode, body.lat, body.lng);
   }
 
+  // Migration endpoint - add area to existing bins without it
+  @Post('migrate-add-areas')
+  async migrateAddAreas() {
+    return this.binsService.migrateAddAreas();
+  }
+
   // Public endpoint - no auth required
   @Get('public')
-  getPublicBins() {
-    return this.binsService.findAllPublic();
+  async getPublicBins() {
+    const bins = await this.binsService.findAllPublic();
+    console.log('🗑️ Public bins returned:', bins.length, 'bins');
+    if (bins.length > 0) {
+      console.log('📦 First bin:', JSON.stringify(bins[0], null, 2));
+    }
+    return bins;
   }
 
   // Everyone (Admins/Cleaners) can SEE the bins
@@ -45,14 +62,24 @@ export class BinsController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   async createBin(@Request() req, @Body() dto: CreateBinDto) {
-    if (req.user.role !== 'SUPERADMIN') {
-      throw new UnauthorizedException('Only SuperAdmins can create bins');
+    try {
+      console.log(
+        '📥 Create bin request received:',
+        JSON.stringify(dto, null, 2),
+      );
+      if (req.user.role !== 'SUPERADMIN') {
+        throw new UnauthorizedException('Only SuperAdmins can create bins');
+      }
+      const result = await this.binsService.create(dto);
+      console.log('✅ Bin created successfully:', result);
+      return {
+        message: 'Bin created successfully',
+        data: result,
+      };
+    } catch (error) {
+      console.error('❌ Error creating bin:', error.message);
+      throw error;
     }
-    const bin = await this.binsService.create(dto);
-    return {
-      message: 'Bin created successfully',
-      data: bin,
-    };
   }
 
   @UseGuards(AuthGuard('jwt'))
