@@ -12,6 +12,9 @@ export class Cleaner extends Document {
   @Prop({ required: true })
   area: string;
 
+  @Prop({ type: [String], default: null })
+  pictureCleaner: string[];
+
   @Prop({ default: 0 })
   acceptCount: number;
 

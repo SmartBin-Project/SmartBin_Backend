@@ -31,8 +31,10 @@ export class BinsService {
   async findAll() {
     const bins = await this.binModel
       .find()
-      .select('_id binCode location area fillLevel status fullCount')
-     
+      .select(
+        '_id binCode location area fillLevel status fullCount pictureBins',
+      )
+
       .exec();
     console.log(
       '🔍 findAll result:',
@@ -47,7 +49,7 @@ export class BinsService {
   async findAllPublic() {
     return this.binModel
       .find()
-      .select('binCode location area fillLevel status fullCount')
+      .select('binCode location area fillLevel status fullCount pictureBins')
       .exec();
   }
 
@@ -105,7 +107,6 @@ export class BinsService {
     this.logger.log(`Updating bin ${binCode}: fillLevel = ${fillLevel}`);
     const oldStatus = bin.status;
     bin.fillLevel = fillLevel;
-
 
     // Determine Status
     if (fillLevel >= 90) bin.status = 'FULL';

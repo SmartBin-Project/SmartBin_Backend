@@ -156,7 +156,7 @@ export class SuperadminService {
 
   // --- Create Cleaner User
   async createCleaner(dto: CreateCleanerDto) {
-    const { name, telegramChatId, area } = dto;
+    const { name, telegramChatId, area, pictureCleaner } = dto;
 
     const existing = await this.cleanerModel.findOne({ telegramChatId });
     if (existing)
@@ -168,7 +168,7 @@ export class SuperadminService {
       name,
       telegramChatId,
       area,
-      role: 'CLEANER',
+      pictureCleaner: pictureCleaner || [],
     });
     return {
       message: 'Cleaner created successfully',

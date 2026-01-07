@@ -1,10 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
 export class CreateCleanerDto {
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @IsEmail()
+  @IsString()
   @IsNotEmpty()
   telegramChatId: string;
 
@@ -12,9 +12,7 @@ export class CreateCleanerDto {
   @IsNotEmpty()
   area: string;
 
-  @IsNotEmpty()
-  acceptCount: number;
-
-  @IsNotEmpty()
-  rejectCount: number;
+  @IsOptional()
+  @IsArray()
+  pictureCleaner?: string[];
 }
