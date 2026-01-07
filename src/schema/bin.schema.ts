@@ -36,6 +36,9 @@ export class Bin extends Document {
 
   @Prop({ default: 0 })
   fullCount: number;
+
+  @Prop({ type: [String], default: null })
+  pictureBins: string[];
 }
 
 export const BinSchema = SchemaFactory.createForClass(Bin);

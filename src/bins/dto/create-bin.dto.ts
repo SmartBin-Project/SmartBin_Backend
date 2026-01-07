@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsEnum,
+  IsArray,
 } from 'class-validator';
 
 export class CreateBinDto {
@@ -30,4 +31,8 @@ export class CreateBinDto {
   @IsEnum(['EMPTY', 'HALF', 'FULL'])
   @IsOptional()
   status?: 'EMPTY' | 'HALF' | 'FULL';
+
+  @IsOptional()
+  @IsArray()
+  pictureBins: string[];
 }
