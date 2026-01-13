@@ -9,6 +9,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Bin } from 'src/schema/bin.schema';
 import { TasksService } from 'src/task/task.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class BinsService {
@@ -18,7 +20,68 @@ export class BinsService {
     @InjectModel('Bin') private binModel: Model<Bin>,
     @Inject(forwardRef(() => TasksService))
     private tasksService: TasksService,
-  ) {}
+  ) {
+    // Create uploads directory if it doesn't exist
+    this.ensureUploadsDirectory();
+  }
+
+  private ensureUploadsDirectory() {
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'bins');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      this.logger.log(`✅ Created uploads directory: ${uploadsDir}`);
+    }
+  }
+
+  private async saveBase64Image(base64Data: string): Promise<string> {
+    try {
+      const base64String = base64Data.replace(/^data:image\/\w+;base64,/, '');
+
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const filename = `bin-${timestamp}-${randomString}.png`;
+
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'bins');
+      const filePath = path.join(uploadsDir, filename);
+
+      const buffer = Buffer.from(base64String, 'base64');
+      fs.writeFileSync(filePath, buffer);
+
+      const sizeInKB = (buffer.length / 1024).toFixed(2);
+      this.logger.log(` Saved: ${filename} (${sizeInKB} KB)`);
+
+      // Return relative path for storage in database
+      return `/uploads/bins/${filename}`;
+    } catch (error) {
+      this.logger.error(`❌ Error saving Base64 image: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async processImages(pictureBins: string[]): Promise<string[]> {
+    if (!pictureBins || pictureBins.length === 0) {
+      return [];
+    }
+
+    this.logger.log(`\n🖼️  Processing ${pictureBins.length} image(s)...`);
+    const savedPaths: string[] = [];
+
+    for (const base64Image of pictureBins) {
+      if (base64Image) {
+        try {
+          const savedPath = await this.saveBase64Image(base64Image);
+          savedPaths.push(savedPath);
+        } catch (error) {
+          this.logger.warn(`⚠️  Failed to save one image, continuing...`);
+        }
+      }
+    }
+
+    if (savedPaths.length > 0) {
+      this.logger.log(`✅ All images saved successfully\n`);
+    }
+    return savedPaths;
+  }
 
   async create(dto: any) {
     if (!dto.location || !dto.location.lat || !dto.location.lng) {
@@ -32,14 +95,10 @@ export class BinsService {
     const bins = await this.binModel
       .find()
       .select(
-        '_id binCode location area fillLevel status fullCount pictureBins',
+        '_id binCode location area fillLevel status fullCount pictureBins addressBin',
       )
 
       .exec();
-    console.log(
-      '🔍 findAll result:',
-      bins.length > 0 ? JSON.stringify(bins[0]) : 'empty',
-    );
     return bins;
   }
   // async findAll() {
@@ -49,7 +108,9 @@ export class BinsService {
   async findAllPublic() {
     return this.binModel
       .find()
-      .select('binCode location area fillLevel status fullCount pictureBins')
+      .select(
+        'binCode location area fillLevel status fullCount pictureBins addressBin',
+      )
       .exec();
   }
 
@@ -64,6 +125,16 @@ export class BinsService {
     }
 
     const oldStatus = bin.status;
+    if (dto.pictureBins && Array.isArray(dto.pictureBins)) {
+      const savedImagePaths = await this.processImages(dto.pictureBins);
+
+      if (savedImagePaths.length > 0) {
+        dto.pictureBins = savedImagePaths;
+      } else {
+        delete dto.pictureBins;
+      }
+    }
+
     // Update bin properties from DTO
     Object.assign(bin, dto);
 

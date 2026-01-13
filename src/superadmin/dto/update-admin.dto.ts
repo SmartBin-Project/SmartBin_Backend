@@ -1,31 +1,30 @@
 import {
   IsEmail,
-  IsNotEmpty,
   IsString,
-  MinLength,
   IsOptional,
+  MinLength,
   IsArray,
 } from 'class-validator';
 
-export class CreateAdminDto {
+export class UpdateAdminDto {
   @IsString()
-  @IsNotEmpty()
-  username: string;
+  @IsOptional()
+  username?: string;
+
   @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
+
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(8, {
     message: 'Password must be at least 8 characters long',
   })
-  password: string;
+  password?: string;
+
   @IsString()
-  @IsNotEmpty()
-  role: string;
-  @IsString()
-  @IsNotEmpty()
-  area: string;
+  @IsOptional()
+  area?: string;
 
   @IsString()
   @IsOptional()

@@ -37,7 +37,7 @@ export class Admin extends Document {
   address: string;
 
   @Prop({ default: null })
-  profilePic: string;
+  profilePic: string[];
 }
 
 export const AdminSchema = SchemaFactory.createForClass(Admin);

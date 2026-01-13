@@ -14,6 +14,7 @@ import { SuperadminService } from './superadmin.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { CreateCleanerDto } from './dto/create-cleaner.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateAdminDto } from './dto/update-admin.dto';
 
 @Controller('superadmin')
 @UseGuards(AuthGuard('jwt'))
@@ -46,7 +47,7 @@ export class SuperAdminController {
   }
 
   @Patch('/update-admin/:id')
-  async updateAdmin(@Param('id') id: string, @Body() dto: CreateAdminDto) {
+  async updateAdmin(@Param('id') id: string, @Body() dto: UpdateAdminDto) {
     return this.superadminService.updateAdmin(id, dto);
   }
 
