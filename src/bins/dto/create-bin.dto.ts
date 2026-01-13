@@ -35,4 +35,7 @@ export class CreateBinDto {
   @IsOptional()
   @IsArray()
   pictureBins: string[];
+
+  @IsString()
+  addressBin: string;
 }

@@ -20,13 +20,8 @@ export class BinsController {
   // NOTE: We do NOT use @UseGuards('jwt') here because the ESP32
   // usually cannot login. Later, we can add a simple API Key check.
   @Patch('update-level')
-  updateLevel(
-    @Body() body: { binCode: string; fillLevel: number},
-  ) {
-    return this.binsService.updateFillLevel(
-      body.binCode,
-      body.fillLevel,
-    );
+  updateLevel(@Body() body: { binCode: string; fillLevel: number }) {
+    return this.binsService.updateFillLevel(body.binCode, body.fillLevel);
   }
 
   @Post('update-location')
@@ -44,10 +39,6 @@ export class BinsController {
   @Get('public')
   async getPublicBins() {
     const bins = await this.binsService.findAllPublic();
-    console.log('🗑️ Public bins returned:', bins.length, 'bins');
-    if (bins.length > 0) {
-      console.log('📦 First bin:', JSON.stringify(bins[0], null, 2));
-    }
     return bins;
   }
 
@@ -70,13 +61,12 @@ export class BinsController {
         throw new UnauthorizedException('Only SuperAdmins can create bins');
       }
       const result = await this.binsService.create(dto);
-      console.log('✅ Bin created successfully:', result);
       return {
         message: 'Bin created successfully',
         data: result,
       };
     } catch (error) {
-      console.error('❌ Error creating bin:', error.message);
+      console.error('Error creating bin:', error.message);
       throw error;
     }
   }
@@ -86,6 +76,17 @@ export class BinsController {
   async updateBin(@Request() req, @Param('id') id: string, @Body() dto: any) {
     if (req.user.role !== 'SUPERADMIN') {
       throw new UnauthorizedException('Only SuperAdmins can update bins');
+    }
+    if (
+      dto.pictureBins &&
+      Array.isArray(dto.pictureBins) &&
+      dto.pictureBins.length > 0
+    ) {
+      console.log(`Images: ${dto.pictureBins.length} image(s) received\n`);
+      dto.pictureBins.forEach((img, index) => {
+        const sizeInKB = (img.length / 1024).toFixed(2);
+        console.log(`   [Image ${index + 1}] Size: ${sizeInKB} KB`);
+      });
     }
     const bin = await this.binsService.update(id, dto);
     return {

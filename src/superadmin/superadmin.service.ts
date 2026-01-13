@@ -14,6 +14,7 @@ import { Cleaner } from 'src/schema/cleaner.schema';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CreateCleanerDto } from './dto/create-cleaner.dto';
+import { UpdateAdminDto } from './dto/update-admin.dto';
 @Injectable()
 export class SuperadminService {
   constructor(
@@ -24,12 +25,9 @@ export class SuperadminService {
     @InjectModel('Cleaner') private cleanerModel: Model<Cleaner>,
   ) {}
 
-  // --- Get User Profile
   async getProfile(userId: string) {
-    // Try to find in Admin first
     let user = await this.adminModel.findById(userId).exec();
 
-    // If not found in Admin, try SuperAdmin
     if (!user) {
       user = await this.superAdminModel.findById(userId).exec();
     }
@@ -38,21 +36,15 @@ export class SuperadminService {
     return user;
   }
 
-  // --- Update User Profile
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    // Try to find in Admin first
     let user = await this.adminModel.findById(userId).exec();
     let isAdmin = true;
-
-    // If not found in Admin, try SuperAdmin
     if (!user) {
       user = await this.superAdminModel.findById(userId).exec();
       isAdmin = false;
     }
 
     if (!user) throw new NotFoundException('User not found');
-
-    // Only update allowed profile fields (not password, email, or role)
     const updateData = {
       firstName: dto.firstName || user.firstName,
       lastName: dto.lastName || user.lastName,
@@ -80,7 +72,6 @@ export class SuperadminService {
     };
   }
 
-  // --- Dashboard Stats
   async getDashboardStats() {
     const totalBins = await this.binModel.countDocuments();
     const fullBins = await this.binModel.countDocuments({ status: 'FULL' });
@@ -101,12 +92,10 @@ export class SuperadminService {
     };
   }
 
-  //   --- Get All Admin Users
   async getAllAdmins() {
     return this.adminModel.find().exec();
   }
 
-  //   --- Create Admin User
   async createAdmin(dto: CreateAdminDto) {
     const { username, email, password, area } = dto;
 
@@ -129,7 +118,6 @@ export class SuperadminService {
     };
   }
 
-  //   --- Delete Admin User
   async deleteAdmin(id: string) {
     return {
       message: 'Admin deleted successfully',
@@ -137,24 +125,29 @@ export class SuperadminService {
     };
   }
 
-  //   --- Update Admin User
-  async updateAdmin(id: string, dto: CreateAdminDto) {
+  async updateAdmin(id: string, dto: UpdateAdminDto) {
+    const updateData: any = { ...dto };
+
+    if (dto.password && dto.password.trim()) {
+      updateData.password = await bcrypt.hash(dto.password, 10);
+    } else {
+      delete updateData.password;
+    }
+
     return {
       message: 'Admin updated successfully',
       admin: await this.adminModel
-        .findByIdAndUpdate(id, dto, {
+        .findByIdAndUpdate(id, updateData, {
           new: true,
         })
         .exec(),
     };
   }
 
-  //  --- Get All Cleaner Users
   async getAllCleaners() {
     return this.cleanerModel.find().exec();
   }
 
-  // --- Create Cleaner User
   async createCleaner(dto: CreateCleanerDto) {
     const { name, telegramChatId, area, pictureCleaner } = dto;
 
@@ -176,7 +169,6 @@ export class SuperadminService {
     };
   }
 
-  //   --- Delete Cleaner User
   async deleteCleaner(id: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid cleaner ID format');
@@ -194,7 +186,6 @@ export class SuperadminService {
     };
   }
 
-  //   --- Update Cleaner User
   async updateCleaner(id: string, dto: CreateCleanerDto) {
     return {
       message: 'Cleaner updated successfully',
