@@ -11,6 +11,8 @@ import { Bin } from 'src/schema/bin.schema';
 import { TasksService } from 'src/task/task.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { TranslationService } from 'src/common/translation.service';
+import { CreateBinDto } from './dto/create-bin.dto';
 
 @Injectable()
 export class BinsService {
@@ -20,6 +22,7 @@ export class BinsService {
     @InjectModel('Bin') private binModel: Model<Bin>,
     @Inject(forwardRef(() => TasksService))
     private tasksService: TasksService,
+    private translationService: TranslationService,
   ) {
     // Create uploads directory if it doesn't exist
     this.ensureUploadsDirectory();
@@ -83,10 +86,27 @@ export class BinsService {
     return savedPaths;
   }
 
-  async create(dto: any) {
+  async create(dto: CreateBinDto) {
     if (!dto.location || !dto.location.lat || !dto.location.lng) {
       throw new Error('Location with lat and lng is required');
     }
+    
+    // --- AUTO TRANSLATE LOGIC START ---
+    
+    // 1. Auto-translate AREA
+    if (dto.area && dto.area.en && !dto.area.kh) {
+      this.logger.log(`Auto-translating Area: ${dto.area.en}...`);
+      dto.area.kh = await this.translationService.translateText(dto.area.en);
+    }
+
+    // 2. Auto-translate ADDRESS
+    if (dto.addressBin && dto.addressBin.en && !dto.addressBin.kh) {
+      this.logger.log(`Auto-translating Address: ${dto.addressBin.en}...`);
+      dto.addressBin.kh = await this.translationService.translateText(dto.addressBin.en);
+    }
+
+    // --- AUTO TRANSLATE LOGIC END ---
+
     const newBin = new this.binModel(dto);
     return newBin.save();
   }
@@ -124,6 +144,18 @@ export class BinsService {
       throw new NotFoundException(`Bin with ID ${id} not found`);
     }
 
+    // 1. Handle Area: If 'en' is present but 'kh' is missing, auto-translate
+    if (dto.area && dto.area.en && !dto.area.kh) {
+      this.logger.log(`[Update] Auto-translating Area: ${dto.area.en}...`);
+      dto.area.kh = await this.translationService.translateText(dto.area.en);
+    }
+
+    // 2. Handle Address: If 'en' is present but 'kh' is missing, auto-translate
+    if (dto.addressBin && dto.addressBin.en && !dto.addressBin.kh) {
+      this.logger.log(`[Update] Auto-translating Address: ${dto.addressBin.en}...`);
+      dto.addressBin.kh = await this.translationService.translateText(dto.addressBin.en);
+    }
+    
     const oldStatus = bin.status;
     if (dto.pictureBins && Array.isArray(dto.pictureBins)) {
       const savedImagePaths = await this.processImages(dto.pictureBins);
@@ -199,7 +231,7 @@ export class BinsService {
         try {
           const newTask = await this.tasksService.assignTaskToRandomCleaner(
             bin._id.toString(),
-            bin.area,
+            bin.area.en,
           );
           if (newTask) {
             this.logger.log(`Task created: ${newTask._id}`);
@@ -270,7 +302,11 @@ export class BinsService {
       $or: [{ area: null }, { area: { $exists: false } }],
     });
     for (const bin of binsWithoutArea) {
-      bin.area = areaMap[bin.binCode] || 'Unknown Area';
+      const enArea = areaMap[bin.binCode] || 'Unknown Area';
+      bin.area = {
+        en: enArea,
+        kh: await this.translationService.translateText(enArea),
+      };
       await bin.save();
     }
 
