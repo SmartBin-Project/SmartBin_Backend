@@ -213,12 +213,12 @@ export class TasksService {
       }
 
       this.logger.log(
-        `[REJECT] Found bin ${bin._id} with area ${bin.area}. Attempting to reassign task...`,
+        `[REJECT] Found bin ${bin._id} with area ${bin.area.en}. Attempting to reassign task...`,
       );
 
       const newTask = await this.assignTaskToRandomCleaner(
         binId,
-        bin.area,
+        bin.area.en,
         updatedTask,
       );
 

@@ -13,9 +13,12 @@ export class CreateBinDto {
   @IsNotEmpty()
   binCode: string;
 
-  @IsString()
+  @IsObject()
   @IsNotEmpty()
-  area: string;
+  area: {
+    en: string;
+    kh: string;
+  };
 
   @IsObject()
   @IsNotEmpty()
@@ -36,6 +39,9 @@ export class CreateBinDto {
   @IsArray()
   pictureBins: string[];
 
-  @IsString()
-  addressBin: string;
+  @IsObject()
+  addressBin: {
+    en: string;
+    kh: string;
+  };
 }

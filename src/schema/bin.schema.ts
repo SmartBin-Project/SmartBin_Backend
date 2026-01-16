@@ -6,8 +6,17 @@ export class Bin extends Document {
   @Prop({ required: true, unique: true })
   binCode: string;
 
-  @Prop({ required: true })
-  area: string;
+  @Prop({
+    type: {
+      en: String,
+      kh: String,
+    },
+    required: true,
+  })
+  area: {
+    en: string;
+    kh: string;
+  };
 
   @Prop({
     type: {
@@ -37,11 +46,20 @@ export class Bin extends Document {
   @Prop({ default: 0 })
   fullCount: number;
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: [String], default: null })
   pictureBins: string[];
 
-  @Prop({ type: String, required: true })
-  addressBin: string;
+  @Prop({
+    type: {
+      en: String,
+      kh: String,
+    },
+    required: true,
+  })
+  addressBin: {
+    en: string;
+    kh: string;
+  };
 }
 
 export const BinSchema = SchemaFactory.createForClass(Bin);
