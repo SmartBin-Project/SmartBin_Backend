@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto'; // Use built-in crypto lib
+import * as crypto from 'crypto';
 import { Model } from 'mongoose';
 
 import { EmailService } from 'src/email/email.service';
@@ -26,13 +26,9 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
-  //-----------------------------------------
-  // REGISTER
-  //-----------------------------------------
   async register(dto: RegisterDTO) {
     const { email, password, username, role } = dto;
 
-    // SECURITY FIX: Always check both collections to prevent duplicate emails
     const adminExists = await this.adminModel.findOne({ email });
     const superAdminExists = await this.superAdminModel.findOne({ email });
 
@@ -69,9 +65,6 @@ export class AuthService {
     }
   }
 
-  //-----------------------------------------
-  // LOGIN (Unchanged but validated via DTO)
-  //-----------------------------------------
   async login(dto: LoginDTO) {
     const { email, password } = dto;
 
@@ -79,7 +72,7 @@ export class AuthService {
       (await this.adminModel.findOne({ email })) ||
       (await this.superAdminModel.findOne({ email }));
 
-    if (!user) throw new NotFoundException('Invalid credentials'); // Generic message
+    if (!user) throw new NotFoundException('Invalid credentials');
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
@@ -96,9 +89,6 @@ export class AuthService {
     };
   }
 
-  //-----------------------------------------
-  // FORGOT PASSWORD (OTP)
-  //-----------------------------------------
   async forgotPassword(dto: ForgotPasswordDTO) {
     const { email } = dto;
 
@@ -108,13 +98,12 @@ export class AuthService {
 
     if (!user) throw new NotFoundException('Email not found');
 
-    // SECURITY FIX: Use crypto for secure random numbers
     const otp = crypto.randomInt(100000, 999999).toString();
 
     await this.otpModel.create({
       email,
       otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 min
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
     await this.emailService.sendOtp(email, otp);
@@ -122,9 +111,6 @@ export class AuthService {
     return { message: 'OTP sent to your email' };
   }
 
-  //-----------------------------------------
-  // RESET PASSWORD
-  //-----------------------------------------
   async resetPassword(dto: ResetPasswordDTO) {
     const { email, otp, password } = dto;
 
@@ -147,14 +133,5 @@ export class AuthService {
     await this.otpModel.deleteMany({ email });
 
     return { message: 'Password updated successfully' };
-  }
-
-  //-----------------------------------------
-  // LOGOUT
-  //-----------------------------------------
-  async logout() {
-    // Logout is stateless in JWT - just clear client-side
-    // In a more advanced setup, you could blacklist the token here
-    return { message: 'Logout successful' };
   }
 }

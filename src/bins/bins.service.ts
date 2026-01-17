@@ -11,6 +11,7 @@ import { Bin } from 'src/schema/bin.schema';
 import { TasksService } from 'src/task/task.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 import { TranslationService } from 'src/common/translation.service';
 import { CreateBinDto } from './dto/create-bin.dto';
 
@@ -40,9 +41,9 @@ export class BinsService {
     try {
       const base64String = base64Data.replace(/^data:image\/\w+;base64,/, '');
 
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 8);
-      const filename = `bin-${timestamp}-${randomString}.png`;
+      // Use UUID for guaranteed unique filenames
+      const uuid = randomUUID();
+      const filename = `bin-${uuid}.png`;
 
       const uploadsDir = path.join(process.cwd(), 'uploads', 'bins');
       const filePath = path.join(uploadsDir, filename);
@@ -69,19 +70,30 @@ export class BinsService {
     this.logger.log(`\n🖼️  Processing ${pictureBins.length} image(s)...`);
     const savedPaths: string[] = [];
 
-    for (const base64Image of pictureBins) {
+    for (let i = 0; i < pictureBins.length; i++) {
+      const base64Image = pictureBins[i];
       if (base64Image) {
         try {
+          this.logger.log(
+            `   [${i + 1}/${pictureBins.length}] Processing image...`,
+          );
           const savedPath = await this.saveBase64Image(base64Image);
           savedPaths.push(savedPath);
+          this.logger.log(
+            `   [${i + 1}/${pictureBins.length}] ✅ Saved to: ${savedPath}`,
+          );
         } catch (error) {
-          this.logger.warn(`⚠️  Failed to save one image, continuing...`);
+          this.logger.warn(
+            `   [${i + 1}/${pictureBins.length}] ⚠️  Failed to save image: ${error.message}`,
+          );
         }
       }
     }
 
     if (savedPaths.length > 0) {
-      this.logger.log(`✅ All images saved successfully\n`);
+      this.logger.log(
+        `✅ All images processed: ${savedPaths.length}/${pictureBins.length} saved successfully\n`,
+      );
     }
     return savedPaths;
   }
@@ -90,9 +102,9 @@ export class BinsService {
     if (!dto.location || !dto.location.lat || !dto.location.lng) {
       throw new Error('Location with lat and lng is required');
     }
-    
+
     // --- AUTO TRANSLATE LOGIC START ---
-    
+
     // 1. Auto-translate AREA
     if (dto.area && dto.area.en && !dto.area.kh) {
       this.logger.log(`Auto-translating Area: ${dto.area.en}...`);
@@ -102,10 +114,42 @@ export class BinsService {
     // 2. Auto-translate ADDRESS
     if (dto.addressBin && dto.addressBin.en && !dto.addressBin.kh) {
       this.logger.log(`Auto-translating Address: ${dto.addressBin.en}...`);
-      dto.addressBin.kh = await this.translationService.translateText(dto.addressBin.en);
+      dto.addressBin.kh = await this.translationService.translateText(
+        dto.addressBin.en,
+      );
     }
 
     // --- AUTO TRANSLATE LOGIC END ---
+
+    // --- PROCESS IMAGES START ---
+    // Handle image processing: Convert base64 to file paths (same as update)
+    if (
+      dto.pictureBins &&
+      Array.isArray(dto.pictureBins) &&
+      dto.pictureBins.length > 0
+    ) {
+      this.logger.log(
+        `\n📷 Processing pictureBins: ${dto.pictureBins.length} image(s) received`,
+      );
+
+      // Check if these are base64 strings (new images from frontend)
+      const hasBase64 = dto.pictureBins.some((img: string) =>
+        img.startsWith('data:image'),
+      );
+
+      if (hasBase64) {
+        this.logger.log(
+          `✅ Detected base64 images - processing ${dto.pictureBins.length} image(s)...`,
+        );
+        const savedImagePaths = await this.processImages(dto.pictureBins);
+        this.logger.log(
+          `📁 Saved ${savedImagePaths.length} image(s) successfully`,
+        );
+        // Replace base64 strings with actual file paths
+        dto.pictureBins = savedImagePaths;
+      }
+    }
+    // --- PROCESS IMAGES END ---
 
     const newBin = new this.binModel(dto);
     return newBin.save();
@@ -152,23 +196,78 @@ export class BinsService {
 
     // 2. Handle Address: If 'en' is present but 'kh' is missing, auto-translate
     if (dto.addressBin && dto.addressBin.en && !dto.addressBin.kh) {
-      this.logger.log(`[Update] Auto-translating Address: ${dto.addressBin.en}...`);
-      dto.addressBin.kh = await this.translationService.translateText(dto.addressBin.en);
+      this.logger.log(
+        `[Update] Auto-translating Address: ${dto.addressBin.en}...`,
+      );
+      dto.addressBin.kh = await this.translationService.translateText(
+        dto.addressBin.en,
+      );
     }
-    
-    const oldStatus = bin.status;
-    if (dto.pictureBins && Array.isArray(dto.pictureBins)) {
-      const savedImagePaths = await this.processImages(dto.pictureBins);
 
-      if (savedImagePaths.length > 0) {
-        dto.pictureBins = savedImagePaths;
+    const oldStatus = bin.status;
+
+    // 3. Handle image updates: ONLY process if pictureBins are provided (new base64 images)
+    if (
+      dto.pictureBins &&
+      Array.isArray(dto.pictureBins) &&
+      dto.pictureBins.length > 0
+    ) {
+      this.logger.log(
+        `\n Processing pictureBins update: ${dto.pictureBins.length} image(s) received`,
+      );
+
+      // Check if these are base64 strings (new images) or file paths (old images)
+      const hasBase64 = dto.pictureBins.some((img: string) =>
+        img.startsWith('data:image'),
+      );
+
+      if (hasBase64) {
+        this.logger.log(
+          `Detected base64 images - processing ${dto.pictureBins.length} image(s)...`,
+        );
+        const savedImagePaths = await this.processImages(dto.pictureBins);
+        this.logger.log(
+          ` Saved ${savedImagePaths.length} image(s) successfully`,
+        );
+        if (savedImagePaths.length > 0) {
+          dto.pictureBins = savedImagePaths;
+          this.logger.log(
+            ` Updated pictureBins array with ${savedImagePaths.length} path(s)`,
+          );
+        } else {
+          this.logger.warn(
+            `  No images were saved, removing pictureBins from update`,
+          );
+          delete dto.pictureBins;
+        }
       } else {
-        delete dto.pictureBins;
+        // These are already saved file paths from the database, keep them as is
+        this.logger.log(
+          `Keeping existing ${dto.pictureBins.length} image(s) from database...`,
+        );
       }
+    } else {
+      // No images provided in update - preserve existing images
+      if (dto.pictureBins === undefined) {
+        this.logger.log(
+          `No pictureBins provided in update - preserving existing images`,
+        );
+      }
+      delete dto.pictureBins;
     }
 
     // Update bin properties from DTO
     Object.assign(bin, dto);
+
+    // Log what's being saved
+    if (bin.pictureBins && Array.isArray(bin.pictureBins)) {
+      this.logger.log(
+        `\n💾 About to save bin with ${bin.pictureBins.length} image(s):`,
+      );
+      bin.pictureBins.forEach((path, idx) => {
+        this.logger.log(`   [${idx + 1}] ${path}`);
+      });
+    }
 
     // If fillLevel is being updated, recalculate status and fullCount
     if (dto.fillLevel !== undefined) {
@@ -187,6 +286,14 @@ export class BinsService {
     }
 
     const result = await bin.save();
+
+    // Log what was actually saved
+    if (result.pictureBins && Array.isArray(result.pictureBins)) {
+      this.logger.log(
+        `\n✅ Bin saved successfully with ${result.pictureBins.length} image(s)`,
+      );
+    }
+
     return result;
   }
 

@@ -53,20 +53,21 @@ export class BinsController {
   @Post()
   async createBin(@Request() req, @Body() dto: CreateBinDto) {
     try {
+      // Log only relevant metadata, NOT the full DTO with base64 images
       console.log(
-        '📥 Create bin request received:',
-        JSON.stringify(dto, null, 2),
+        ` Creating bin: ${dto.binCode} with ${dto.pictureBins?.length || 0} image(s)`,
       );
       if (req.user.role !== 'SUPERADMIN') {
         throw new UnauthorizedException('Only SuperAdmins can create bins');
       }
       const result = await this.binsService.create(dto);
+      console.log(` Bin created successfully: ${result._id}`);
       return {
         message: 'Bin created successfully',
         data: result,
       };
     } catch (error) {
-      console.error('Error creating bin:', error.message);
+      console.error(`Error creating bin ${dto?.binCode}:`, error.message);
       throw error;
     }
   }
@@ -77,18 +78,22 @@ export class BinsController {
     if (req.user.role !== 'SUPERADMIN') {
       throw new UnauthorizedException('Only SuperAdmins can update bins');
     }
+    // Log only image count and size, not the base64 data
     if (
       dto.pictureBins &&
       Array.isArray(dto.pictureBins) &&
       dto.pictureBins.length > 0
     ) {
-      console.log(`Images: ${dto.pictureBins.length} image(s) received\n`);
-      dto.pictureBins.forEach((img, index) => {
-        const sizeInKB = (img.length / 1024).toFixed(2);
-        console.log(`   [Image ${index + 1}] Size: ${sizeInKB} KB`);
-      });
+      const imageCount = dto.pictureBins.length;
+      const totalSizeKB = dto.pictureBins
+        .reduce((sum: number, img: string) => sum + img.length / 1024, 0)
+        .toFixed(2);
+      console.log(
+        `s Updating bin with ${imageCount} image(s) | Total size: ${totalSizeKB} KB`,
+      );
     }
     const bin = await this.binsService.update(id, dto);
+    console.log(`Bin updated successfully: ${id}`);
     return {
       message: 'Bin updated successfully',
       data: bin,

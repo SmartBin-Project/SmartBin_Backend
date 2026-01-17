@@ -2,27 +2,32 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private configService: ConfigService) {
-    const secret =
-      configService.get<string>('JWT_SECRET') || 'your_jwt_secret_key';
+    const secret = configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET IS NOT DEFINED');
+    }
+
     super({
-      // 1. Get the token from the "Authorization: Bearer <token>" header
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-
-      // 2. Reject expired tokens immediately
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (request: Request) => {
+          let token = null;
+          if (request && request.cookies) {
+            token = request.cookies['access_token'];
+          }
+          return token;
+        },
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
-
-      // 3. SECURE: Load the secret from .env (Must match AuthModule)
-      secretOrKey: secret,
+      secretOrKey: configService.get<string>('JWT_SECRET'),
     });
   }
-
-  // This runs if the token is valid. The return value is added to request.user
   async validate(payload: any) {
-    // Payload comes from the AuthService login method
     return {
       userId: payload.sub,
       email: payload.email,
