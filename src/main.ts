@@ -10,9 +10,14 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );
   app.enableCors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin:
+      process.env.CLIENT_URL ||
+      'http://localhost:5173' ||
+      'https://update-worker-name-to-smartbin-smartbin.cheangseyha2208.workers.dev' ||
+      'https://smartbin.cheangseyha2208.workers.dev',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
+
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
