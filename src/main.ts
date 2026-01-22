@@ -12,12 +12,14 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.MQTT,
     options: {
-      url: process.env.MQTT_URL || 'mqtt://broker.emqx.io:1883',
-      // If using authentication:
-      username: process.env.MQTT_USERNAME || 'your_user',
-      password: process.env.MQTT_PASSWORD || 'your_password',
+      // url: process.env.MQTT_URL || 'mqtt://broker.emqx.io:1883',
+      // // If using authentication:
+      // username: process.env.MQTT_USERNAME || 'your_user',
+      // password: process.env.MQTT_PASSWORD || 'your_password',
 
-      protocolId: 'mqtts',
+      // protocolId: 'mqtts',
+
+      url: 'mqtt://test.mosquitto.org:1883',
     },
   });
 

@@ -33,7 +33,7 @@ export class BinsController {
   }
 
   // 2. Add the MQTT Handlers
-  @MessagePattern('bin/update-level')
+  @MessagePattern('my-secret-project/bin/update-level')
   async handleMqttUpdate(
     @Payload() data: { binCode: string; fillLevel: number },
   ) {
@@ -44,7 +44,7 @@ export class BinsController {
     // Reuse your existing service logic
     return this.binsService.updateFillLevel(data.binCode, data.fillLevel);
   }
-  @MessagePattern('bin/update-location')
+  @MessagePattern('my-secret-project/bin/update-location')
   async handleMqttLocation(
     @Payload() data: { binCode: string; lat: number; lng: number },
   ) {

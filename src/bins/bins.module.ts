@@ -5,6 +5,7 @@ import { BinSchema } from 'src/schema/bin.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TaskModule } from 'src/task/task.module';
 import { TranslationService } from 'src/common/translation.service';
+import { BinsGateway } from './bins.gateway';
 
 @Module({
   imports: [
@@ -14,7 +15,8 @@ import { TranslationService } from 'src/common/translation.service';
   controllers: [BinsController],
   providers: [
     BinsService,
-    TranslationService
+    TranslationService,
+    BinsGateway
   ],
   exports: [BinsService],
 })
