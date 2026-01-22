@@ -14,6 +14,7 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { TranslationService } from 'src/common/translation.service';
 import { CreateBinDto } from './dto/create-bin.dto';
+import { BinsGateway } from './bins.gateway';
 
 @Injectable()
 export class BinsService {
@@ -24,6 +25,7 @@ export class BinsService {
     @Inject(forwardRef(() => TasksService))
     private tasksService: TasksService,
     private translationService: TranslationService,
+    private binsGateway: BinsGateway,
   ) {
     // Create uploads directory if it doesn't exist
     this.ensureUploadsDirectory();
@@ -363,6 +365,13 @@ export class BinsService {
     }
 
     await bin.save();
+  
+    this.binsGateway.sendBinUpdate({
+      binCode: bin.binCode,
+      fillLevel: bin.fillLevel,
+      status: bin.status,
+      // You can send the whole bin object if you want
+    });
     return bin;
   }
 
