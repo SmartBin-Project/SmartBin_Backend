@@ -9,13 +9,16 @@ import {
   UseGuards,
   Request,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { BinsService } from './bins.service';
 import { AuthGuard } from '@nestjs/passport';
 import { CreateBinDto } from './dto/create-bin.dto';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('bins')
 export class BinsController {
+  private readonly logger = new Logger(BinsController.name);
   constructor(private readonly binsService: BinsService) {}
   // NOTE: We do NOT use @UseGuards('jwt') here because the ESP32
   // usually cannot login. Later, we can add a simple API Key check.
@@ -27,6 +30,28 @@ export class BinsController {
   @Post('update-location')
   updateLocation(@Body() body: { binCode: string; lat: number; lng: number }) {
     return this.binsService.updateLocation(body.binCode, body.lat, body.lng);
+  }
+
+  // 2. Add the MQTT Handlers
+  @MessagePattern('bin/update-level')
+  async handleMqttUpdate(
+    @Payload() data: { binCode: string; fillLevel: number },
+  ) {
+    this.logger.log(
+      `MQTT Received: Bin ${data.binCode} Level ${data.fillLevel}`,
+    );
+
+    // Reuse your existing service logic
+    return this.binsService.updateFillLevel(data.binCode, data.fillLevel);
+  }
+  @MessagePattern('bin/update-location')
+  async handleMqttLocation(
+    @Payload() data: { binCode: string; lat: number; lng: number },
+  ) {
+    this.logger.log(
+      `MQTT Location: ${data.binCode} [${data.lat}, ${data.lng}]`,
+    );
+    return this.binsService.updateLocation(data.binCode, data.lat, data.lng);
   }
 
   // Migration endpoint - add area to existing bins without it
