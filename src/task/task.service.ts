@@ -133,6 +133,10 @@ export class TasksService {
     return savedTask;
   }
 
+  async findById(id: string) {
+    return this.taskModel.findById(id);
+  }
+
   // 2. Cleaner Accepts Task
   async acceptTask(taskId: string) {
     const task = await this.taskModel.findById(taskId);
@@ -149,7 +153,7 @@ export class TasksService {
       taskId,
       {
         $set: {
-          status: 'COMPLETED',
+          status: 'ACCEPTED',
           acceptedAt: new Date(),
         },
       },
@@ -250,4 +254,6 @@ export class TasksService {
       throw error;
     }
   }
+
+
 }

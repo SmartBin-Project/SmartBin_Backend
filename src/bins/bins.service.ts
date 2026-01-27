@@ -311,8 +311,8 @@ export class BinsService {
     return this.binModel.findByIdAndUpdate(binId, { lastTaskId: null });
   }
 
-  // --- HARDWARE UPDATE ---
-  async updateFillLevel(binCode: string, fillLevel: number) {
+  // --- HARDWARE UPDATE (UPDATED LOGIC) ---
+ async updateFillLevel(binCode: string, fillLevel: number) {
     const bin = await this.binModel.findOne({ binCode });
     if (!bin) throw new NotFoundException('Bin not found');
 
@@ -325,42 +325,67 @@ export class BinsService {
     else if (fillLevel >= 50) bin.status = 'HALF';
     else bin.status = 'EMPTY';
 
-    // If status changed to FULL, increment count
     if (bin.status === 'FULL' && oldStatus !== 'FULL') {
       bin.fullCount = (bin.fullCount || 0) + 1;
     }
 
     await bin.save();
 
-    // TRIGGER ALERT if Full
+    // 🔥 UPDATED LOGIC START 🔥
     if (bin.status === 'FULL') {
-      this.logger.log(`Bin ${binCode} is FULL. Creating task...`);
-      // Check if there is already an active task so we don't spam
-      if (!bin.lastTaskId) {
+      let shouldCreateTask = true;
+
+      // 1. Check if there is an existing task
+      if (bin.lastTaskId) {
+        // Fetch the task details
+        const existingTask = await this.tasksService.findById(bin.lastTaskId);
+
+        if (existingTask) {
+          // A. If task is PENDING (No one accepted yet)
+          if (existingTask.status === 'PENDING') {
+             this.logger.log(`Task ${existingTask._id} is PENDING. Waiting for cleaner.`);
+             shouldCreateTask = false; // Don't spam new tasks
+          } 
+          // B. If task is ACCEPTED (Cleaner is coming)
+          else if (existingTask.status === 'ACCEPTED' || existingTask.status === 'IN_PROGRESS') {
+             const now = new Date().getTime();
+             const acceptedAt = new Date(existingTask.acceptedAt || existingTask.updatedAt).getTime();
+             const minutesSinceAccept = (now - acceptedAt) / (1000 * 60);
+
+             if (minutesSinceAccept < 10) {
+                this.logger.log(`⏳ Cleaner accepted ${minutesSinceAccept.toFixed(1)} mins ago. Suppressing Alert.`);
+                shouldCreateTask = false; // <--- THIS STOPS THE ALERT
+             } else {
+                this.logger.warn(`⚠️ Cleaner accepted > 10 mins ago but bin still full! Sending Reminder.`);
+                shouldCreateTask = true; // (Optional) Create new task or send reminder
+                // Note: If you just want to remind, handle that logic here instead of creating a NEW task
+             }
+          }
+        }
+      }
+
+      // 2. Only Create Task if Logic Allows
+      if (shouldCreateTask) {
+        this.logger.log(`Bin ${binCode} needs attention. Creating/Updating task...`);
+        // ... (Your existing task creation logic) ...
         try {
           const newTask = await this.tasksService.assignTaskToRandomCleaner(
             bin._id.toString(),
             bin.area.en,
           );
           if (newTask) {
-            this.logger.log(`Task created: ${newTask._id}`);
-            bin.lastTaskId = newTask._id.toString();
-          } else {
-            this.logger.warn(`No task created for bin ${binCode}`);
+             bin.lastTaskId = newTask._id.toString();
           }
         } catch (error) {
-          this.logger.error(`Error creating task for bin ${binCode}:`, error);
+           this.logger.error(`Error creating task: ${error.message}`);
         }
-      } else {
-        this.logger.log(`Bin ${binCode} already has an active task. Skipping.`);
       }
     }
+    // 🔥 UPDATED LOGIC END 🔥
 
     // AUTO-CLEAR TASK when bin is emptied
     if (bin.status === 'EMPTY' && bin.lastTaskId) {
-      this.logger.log(
-        `Bin ${binCode} is now EMPTY. Clearing active task ${bin.lastTaskId}`,
-      );
+      this.logger.log(`Bin ${binCode} is now EMPTY. Clearing task.`);
       bin.lastTaskId = null;
     }
 
@@ -370,7 +395,6 @@ export class BinsService {
       binCode: bin.binCode,
       fillLevel: bin.fillLevel,
       status: bin.status,
-      // You can send the whole bin object if you want
     });
     return bin;
   }
