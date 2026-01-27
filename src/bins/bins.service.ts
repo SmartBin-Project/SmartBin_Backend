@@ -376,11 +376,21 @@ export class BinsService {
   }
 
   async updateLocation(binCode: string, lat: number, lng: number) {
+    // 1. Find and Update Database
     const bin = await this.binModel.findOne({ binCode });
     if (!bin) throw new NotFoundException('Bin not found');
 
     bin.location = { lat, lng };
-    return bin.save();
+    await bin.save();
+
+    // 2. 🔥 ADD THIS: Broadcast the new location to Frontend 🔥
+    this.binsGateway.sendBinUpdate({
+      binCode: bin.binCode,
+      location: bin.location, // Send the new lat/lng
+      // We don't need to send fillLevel here, just location
+    });
+
+    return bin;
   }
 
   // Migration: Add area to bins that don't have it
