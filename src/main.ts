@@ -32,6 +32,7 @@ async function bootstrap() {
       process.env.CLIENT_URL,
       'http://localhost:5173',
       'https://smartbin.cheangseyha2208.workers.dev/',
+      'https://smartbinkh.gic26.tech/',
       'https://smartbin.gic26.tech',
       'https://api.gic26.tech',
     ],
