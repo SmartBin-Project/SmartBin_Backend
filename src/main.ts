@@ -36,7 +36,7 @@ async function bootstrap() {
       'https://smartbin.gic26.tech',
       'https://api.gic26.tech',
       'https://smartbinegen.gic26.tech',
-    ],
+    ].filter(Boolean),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
     // allowedHeaders: ['Content-Type', 'Authorization'],
