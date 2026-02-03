@@ -31,11 +31,8 @@ async function bootstrap() {
     origin: [
       process.env.CLIENT_URL,
       'http://localhost:5173',
-      'https://smartbin.cheangseyha2208.workers.dev',
-      'https://smartbinkh.gic26.tech',
       'https://smartbin.gic26.tech',
       'https://api.gic26.tech',
-      'https://smartbinegen.gic26.tech',
     ].filter(Boolean),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
