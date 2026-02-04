@@ -35,7 +35,7 @@ export class BinsService {
     const uploadsDir = path.join(process.cwd(), 'uploads', 'bins');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
-      this.logger.log(`✅ Created uploads directory: ${uploadsDir}`);
+      this.logger.log(` Created uploads directory: ${uploadsDir}`);
     }
   }
 
@@ -59,7 +59,7 @@ export class BinsService {
       // Return relative path for storage in database
       return `/uploads/bins/${filename}`;
     } catch (error) {
-      this.logger.error(`❌ Error saving Base64 image: ${error.message}`);
+      this.logger.error(`Error saving Base64 image: ${error.message}`);
       throw error;
     }
   }
@@ -69,7 +69,7 @@ export class BinsService {
       return [];
     }
 
-    this.logger.log(`\n🖼️  Processing ${pictureBins.length} image(s)...`);
+    this.logger.log(`\n Processing ${pictureBins.length} image(s)...`);
     const savedPaths: string[] = [];
 
     for (let i = 0; i < pictureBins.length; i++) {
@@ -82,11 +82,11 @@ export class BinsService {
           const savedPath = await this.saveBase64Image(base64Image);
           savedPaths.push(savedPath);
           this.logger.log(
-            `   [${i + 1}/${pictureBins.length}] ✅ Saved to: ${savedPath}`,
+            `   [${i + 1}/${pictureBins.length}]  Saved to: ${savedPath}`,
           );
         } catch (error) {
           this.logger.warn(
-            `   [${i + 1}/${pictureBins.length}] ⚠️  Failed to save image: ${error.message}`,
+            `   [${i + 1}/${pictureBins.length}]  Failed to save image: ${error.message}`,
           );
         }
       }
@@ -94,7 +94,7 @@ export class BinsService {
 
     if (savedPaths.length > 0) {
       this.logger.log(
-        `✅ All images processed: ${savedPaths.length}/${pictureBins.length} saved successfully\n`,
+        `All images processed: ${savedPaths.length}/${pictureBins.length} saved successfully\n`,
       );
     }
     return savedPaths;
@@ -141,11 +141,11 @@ export class BinsService {
 
       if (hasBase64) {
         this.logger.log(
-          `✅ Detected base64 images - processing ${dto.pictureBins.length} image(s)...`,
+          `Detected base64 images - processing ${dto.pictureBins.length} image(s)...`,
         );
         const savedImagePaths = await this.processImages(dto.pictureBins);
         this.logger.log(
-          `📁 Saved ${savedImagePaths.length} image(s) successfully`,
+          `Saved ${savedImagePaths.length} image(s) successfully`,
         );
         // Replace base64 strings with actual file paths
         dto.pictureBins = savedImagePaths;
@@ -208,7 +208,6 @@ export class BinsService {
 
     const oldStatus = bin.status;
 
-    // 3. Handle image updates: ONLY process if pictureBins are provided (new base64 images)
     if (
       dto.pictureBins &&
       Array.isArray(dto.pictureBins) &&
@@ -218,7 +217,6 @@ export class BinsService {
         `\n Processing pictureBins update: ${dto.pictureBins.length} image(s) received`,
       );
 
-      // Check if these are base64 strings (new images) or file paths (old images)
       const hasBase64 = dto.pictureBins.some((img: string) =>
         img.startsWith('data:image'),
       );
@@ -264,7 +262,7 @@ export class BinsService {
     // Log what's being saved
     if (bin.pictureBins && Array.isArray(bin.pictureBins)) {
       this.logger.log(
-        `\n💾 About to save bin with ${bin.pictureBins.length} image(s):`,
+        `\n About to save bin with ${bin.pictureBins.length} image(s):`,
       );
       bin.pictureBins.forEach((path, idx) => {
         this.logger.log(`   [${idx + 1}] ${path}`);
@@ -275,6 +273,8 @@ export class BinsService {
     if (dto.fillLevel !== undefined) {
       if (bin.fillLevel >= 90) {
         bin.status = 'FULL';
+      } else if (bin.fillLevel >= 75) {
+        bin.status = 'NEARLY FULL';
       } else if (bin.fillLevel >= 50) {
         bin.status = 'HALF';
       } else {
@@ -292,7 +292,7 @@ export class BinsService {
     // Log what was actually saved
     if (result.pictureBins && Array.isArray(result.pictureBins)) {
       this.logger.log(
-        `\n✅ Bin saved successfully with ${result.pictureBins.length} image(s)`,
+        `\n Bin saved successfully with ${result.pictureBins.length} image(s)`,
       );
     }
 
@@ -312,7 +312,7 @@ export class BinsService {
   }
 
   // --- HARDWARE UPDATE (UPDATED LOGIC) ---
- async updateFillLevel(binCode: string, fillLevel: number) {
+  async updateFillLevel(binCode: string, fillLevel: number) {
     const bin = await this.binModel.findOne({ binCode });
     if (!bin) throw new NotFoundException('Bin not found');
 
@@ -322,17 +322,21 @@ export class BinsService {
 
     // Determine Status
     if (fillLevel >= 90) bin.status = 'FULL';
+    else if (fillLevel >= 75) bin.status = 'NEARLY FULL';
     else if (fillLevel >= 50) bin.status = 'HALF';
     else bin.status = 'EMPTY';
 
-    if (bin.status === 'FULL' && oldStatus !== 'FULL') {
+    if (
+      (bin.status === 'FULL' || bin.status === 'NEARLY FULL') &&
+      oldStatus !== 'FULL'
+    ) {
       bin.fullCount = (bin.fullCount || 0) + 1;
     }
 
     await bin.save();
 
     // 🔥 UPDATED LOGIC START 🔥
-    if (bin.status === 'FULL') {
+    if (bin.status === 'FULL' || bin.status === 'NEARLY FULL') {
       let shouldCreateTask = true;
 
       // 1. Check if there is an existing task
@@ -343,30 +347,43 @@ export class BinsService {
         if (existingTask) {
           // A. If task is PENDING (No one accepted yet)
           if (existingTask.status === 'PENDING') {
-             this.logger.log(`Task ${existingTask._id} is PENDING. Waiting for cleaner.`);
-             shouldCreateTask = false; // Don't spam new tasks
-          } 
+            this.logger.log(
+              `Task ${existingTask._id} is PENDING. Waiting for cleaner.`,
+            );
+            shouldCreateTask = false; // Don't spam new tasks
+          }
           // B. If task is ACCEPTED (Cleaner is coming)
-          else if (existingTask.status === 'ACCEPTED' || existingTask.status === 'IN_PROGRESS') {
-             const now = new Date().getTime();
-             const acceptedAt = new Date(existingTask.acceptedAt || existingTask.updatedAt).getTime();
-             const minutesSinceAccept = (now - acceptedAt) / (1000 * 60);
+          else if (
+            existingTask.status === 'ACCEPTED' ||
+            existingTask.status === 'IN_PROGRESS'
+          ) {
+            const now = new Date().getTime();
+            const acceptedAt = new Date(
+              existingTask.acceptedAt || existingTask.updatedAt,
+            ).getTime();
+            const minutesSinceAccept = (now - acceptedAt) / (1000 * 60);
 
-             if (minutesSinceAccept < 10) {
-                this.logger.log(`⏳ Cleaner accepted ${minutesSinceAccept.toFixed(1)} mins ago. Suppressing Alert.`);
-                shouldCreateTask = false; // <--- THIS STOPS THE ALERT
-             } else {
-                this.logger.warn(`⚠️ Cleaner accepted > 10 mins ago but bin still full! Sending Reminder.`);
-                shouldCreateTask = true; // (Optional) Create new task or send reminder
-                // Note: If you just want to remind, handle that logic here instead of creating a NEW task
-             }
+            if (minutesSinceAccept < 10) {
+              this.logger.log(
+                `⏳ Cleaner accepted ${minutesSinceAccept.toFixed(1)} mins ago. Suppressing Alert.`,
+              );
+              shouldCreateTask = false; // <--- THIS STOPS THE ALERT
+            } else {
+              this.logger.warn(
+                `⚠️ Cleaner accepted > 10 mins ago but bin still full! Sending Reminder.`,
+              );
+              shouldCreateTask = true; // (Optional) Create new task or send reminder
+              // Note: If you just want to remind, handle that logic here instead of creating a NEW task
+            }
           }
         }
       }
 
       // 2. Only Create Task if Logic Allows
       if (shouldCreateTask) {
-        this.logger.log(`Bin ${binCode} needs attention. Creating/Updating task...`);
+        this.logger.log(
+          `Bin ${binCode} needs attention. Creating/Updating task...`,
+        );
         // ... (Your existing task creation logic) ...
         try {
           const newTask = await this.tasksService.assignTaskToRandomCleaner(
@@ -374,10 +391,10 @@ export class BinsService {
             bin.area.en,
           );
           if (newTask) {
-             bin.lastTaskId = newTask._id.toString();
+            bin.lastTaskId = newTask._id.toString();
           }
         } catch (error) {
-           this.logger.error(`Error creating task: ${error.message}`);
+          this.logger.error(`Error creating task: ${error.message}`);
         }
       }
     }
@@ -390,7 +407,7 @@ export class BinsService {
     }
 
     await bin.save();
-  
+
     this.binsGateway.sendBinUpdate({
       binCode: bin.binCode,
       fillLevel: bin.fillLevel,
