@@ -131,7 +131,7 @@ export class BinsService {
       dto.pictureBins.length > 0
     ) {
       this.logger.log(
-        `\n📷 Processing pictureBins: ${dto.pictureBins.length} image(s) received`,
+        `\n Processing pictureBins: ${dto.pictureBins.length} image(s) received`,
       );
 
       // Check if these are base64 strings (new images from frontend)
@@ -365,12 +365,12 @@ export class BinsService {
 
             if (minutesSinceAccept < 10) {
               this.logger.log(
-                `⏳ Cleaner accepted ${minutesSinceAccept.toFixed(1)} mins ago. Suppressing Alert.`,
+                `Cleaner accepted ${minutesSinceAccept.toFixed(1)} mins ago. Suppressing Alert.`,
               );
               shouldCreateTask = false; // <--- THIS STOPS THE ALERT
             } else {
               this.logger.warn(
-                `⚠️ Cleaner accepted > 10 mins ago but bin still full! Sending Reminder.`,
+                `Cleaner accepted > 10 mins ago but bin still full! Sending Reminder.`,
               );
               shouldCreateTask = true; // (Optional) Create new task or send reminder
               // Note: If you just want to remind, handle that logic here instead of creating a NEW task

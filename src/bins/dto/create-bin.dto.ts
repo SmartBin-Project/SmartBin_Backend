@@ -31,9 +31,9 @@ export class CreateBinDto {
   @IsOptional()
   fillLevel?: number;
 
-  @IsEnum(['EMPTY', 'HALF', 'FULL'])
+  @IsEnum(['EMPTY', 'HALF', 'NEARLY FULL', 'FULL'])
   @IsOptional()
-  status?: 'EMPTY' | 'HALF' | 'FULL';
+  status?: 'EMPTY' | 'HALF' | 'NEARLY FULL' | 'FULL';
 
   @IsOptional()
   @IsArray()

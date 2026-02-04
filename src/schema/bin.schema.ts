@@ -35,7 +35,7 @@ export class Bin extends Document {
 
   @Prop({
     type: String,
-    enum: ['EMPTY', 'HALF', 'FULL'],
+    enum: ['EMPTY', 'HALF', 'NEARLY FULL', 'FULL'],
     default: 'EMPTY',
   })
   status: string;
