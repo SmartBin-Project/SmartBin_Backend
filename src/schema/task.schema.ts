@@ -40,6 +40,9 @@ export class Task extends Document {
 
   @Prop({ type: [String], default: [] })
   rejectedBy: string[];
+
+  @Prop({ default: null })
+  lastRejectionAlertAt?: Date;
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);

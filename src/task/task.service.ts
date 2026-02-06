@@ -228,15 +228,23 @@ export class TasksService {
 
       if (!newTask) {
         this.logger.warn(
-          `[REJECT] No more cleaners available for task ${taskId}. Marking as REJECTED.`,
+          `[REJECT] No more cleaners available for task ${taskId}. All cleaners rejected!`,
         );
-        // Mark task as rejected
+        // Mark task as rejected and set timestamp for 5-minute re-alert
+        const now = new Date();
         await this.taskModel.findByIdAndUpdate(
           taskId,
           {
-            $set: { status: 'REJECTED' },
+            $set: {
+              status: 'REJECTED',
+              lastRejectionAlertAt: now,
+            },
           },
           { runValidators: false },
+        );
+
+        this.logger.log(
+          `[REJECT] Setting re-alert timestamp. Cleaners will be re-asked in 5 minutes.`,
         );
         return null;
       }
@@ -255,5 +263,100 @@ export class TasksService {
     }
   }
 
+  // 4. Check and Re-alert Cleaners after 5 minutes of all rejections
+  async checkAndReAlertAfterRejection(taskId: string) {
+    try {
+      this.logger.log(`========== RE-ALERT CHECK START: ${taskId} ==========`);
 
+      const task = await this.taskModel.findById(taskId);
+      if (!task) {
+        this.logger.warn(`[RE-ALERT] Task ${taskId} not found`);
+        return null;
+      }
+
+      // Only process if status is REJECTED
+      if (task.status !== 'REJECTED') {
+        this.logger.log(
+          `[RE-ALERT] Task is not in REJECTED status. Status: ${task.status}`,
+        );
+        return null;
+      }
+
+      // Check if lastRejectionAlertAt exists and if 5 minutes have passed
+      if (!task.lastRejectionAlertAt) {
+        this.logger.log(`[RE-ALERT] No lastRejectionAlertAt timestamp found`);
+        return null;
+      }
+
+      const now = new Date();
+      const timeSinceLastAlert =
+        (now.getTime() - new Date(task.lastRejectionAlertAt).getTime()) /
+        (1000 * 60);
+
+      // Only re-alert if 5 minutes have passed
+      if (timeSinceLastAlert < 5) {
+        this.logger.log(
+          `[RE-ALERT] Only ${timeSinceLastAlert.toFixed(1)} minutes since last alert. Waiting...`,
+        );
+        return null;
+      }
+
+      this.logger.log(
+        `[RE-ALERT] 5+ minutes have passed. Resetting rejection list and re-assigning...`,
+      );
+
+      const bin = await this.binsService.findById(task.binId.toString());
+      if (!bin) {
+        this.logger.error(`[RE-ALERT] Bin not found for task ${taskId}`);
+        return null;
+      }
+
+      // Reset rejectedBy and rejectionCount, change status back to PENDING
+      const resetTask = await this.taskModel.findByIdAndUpdate(
+        taskId,
+        {
+          $set: {
+            rejectedBy: [],
+            rejectionCount: 0,
+            status: 'PENDING',
+            lastRejectionAlertAt: null,
+            assignedCleanerId: null,
+          },
+        },
+        { new: true, runValidators: false },
+      );
+
+      if (!resetTask) {
+        this.logger.error(`[RE-ALERT] Failed to reset task ${taskId}`);
+        return null;
+      }
+
+      this.logger.log(
+        `[RE-ALERT] Task reset. Assigning to random cleaner again...`,
+      );
+
+      // Try to assign to a new cleaner with fresh list
+      const newTask = await this.assignTaskToRandomCleaner(
+        bin._id.toString(),
+        bin.area.en,
+        resetTask,
+      );
+
+      if (newTask) {
+        this.logger.log(
+          `[RE-ALERT] ✅ Successfully re-assigned task to cleaner ${newTask.assignedCleanerId}`,
+        );
+      } else {
+        this.logger.warn(
+          `[RE-ALERT] Still no cleaners available. Will try again in 5 minutes.`,
+        );
+      }
+
+      this.logger.log(`========== RE-ALERT CHECK SUCCESS ==========`);
+      return newTask;
+    } catch (error) {
+      this.logger.error(`[RE-ALERT] ERROR: ${error.message}`, error.stack);
+      return null;
+    }
+  }
 }

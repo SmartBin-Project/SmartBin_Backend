@@ -376,6 +376,28 @@ export class BinsService {
               // Note: If you just want to remind, handle that logic here instead of creating a NEW task
             }
           }
+          // C. If task is REJECTED (All cleaners rejected - check if 5 mins passed for re-alert)
+          else if (existingTask.status === 'REJECTED') {
+            this.logger.log(
+              `Task ${existingTask._id} is REJECTED. Checking if ready for re-alert...`,
+            );
+            // Try to re-alert after 5 minutes
+            const reAlertedTask =
+              await this.tasksService.checkAndReAlertAfterRejection(
+                bin.lastTaskId,
+              );
+            if (reAlertedTask) {
+              this.logger.log(
+                `✅ Task re-assigned to new cleaner after 5 minute wait.`,
+              );
+              shouldCreateTask = false; // Task was re-assigned
+            } else {
+              this.logger.log(
+                `Re-alert check: Not ready yet or no cleaners available.`,
+              );
+              shouldCreateTask = false; // Wait for next check
+            }
+          }
         }
       }
 
