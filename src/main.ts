@@ -19,7 +19,7 @@ async function bootstrap() {
 
       // protocolId: 'mqtts',
 
-      url: 'mqtt://test.mosquitto.org:1883',
+      url: 'mqtt://broker.hivemq.com:1883',
     },
   });
 
