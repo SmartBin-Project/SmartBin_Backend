@@ -409,6 +409,7 @@ export class BinsService {
         // ... (Your existing task creation logic) ...
         try {
           const newTask = await this.tasksService.assignTaskToRandomCleaner(
+            bin.binCode,
             bin._id.toString(),
             bin.area.en,
           );

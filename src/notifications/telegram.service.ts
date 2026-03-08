@@ -50,7 +50,8 @@ export class TelegramService implements OnModuleInit {
 
           // Update the message to remove buttons
           await this.bot.editMessageText(
-            `✅ Task Accepted! You are assigned to this bin.`,
+            `ភារកិច្ចត្រូវបានទទួលយក! អ្នកត្រូវបានចាត់តាំងឱ្យទៅធុងសំរាមនេះ។` +
+              `សូមអរគុណ ចំពោះការសហការរបស់អ្នក!👋🏻`,
             {
               chat_id: chatId,
               message_id: message.message_id,
@@ -63,7 +64,7 @@ export class TelegramService implements OnModuleInit {
           if (result) {
             // Task was reassigned to another cleaner
             await this.bot.editMessageText(
-              `❌ Task Rejected. Searching for another cleaner...`,
+              `ភារកិច្ចត្រូវបានបដិសេធ។ កំពុងស្វែងរកអ្នកសម្អាតម្នាក់ទៀត...`,
               {
                 chat_id: chatId,
                 message_id: message.message_id,
@@ -72,7 +73,7 @@ export class TelegramService implements OnModuleInit {
           } else {
             // No more cleaners available
             await this.bot.editMessageText(
-              `❌ Task Rejected. No other cleaners available. Admin will be notified.`,
+              `Task Rejected. No other cleaners available. Admin will be notified.`,
               {
                 chat_id: chatId,
                 message_id: message.message_id,
@@ -106,8 +107,14 @@ export class TelegramService implements OnModuleInit {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '✅ Pick (Accept)', callback_data: `pick_${taskId}` },
-              { text: '🚫 Busy (Reject)', callback_data: `busy_${taskId}` },
+              {
+                text: '✅ បានទទួលយក (Accept)',
+                callback_data: `pick_${taskId}`,
+              },
+              {
+                text: '🚫​​ ជាប់ភារកិច្ច (Reject)',
+                callback_data: `busy_${taskId}`,
+              },
             ],
           ],
         },

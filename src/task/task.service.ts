@@ -26,6 +26,7 @@ export class TasksService {
   ) {}
 
   async assignTaskToRandomCleaner(
+    binAddress: string,
     binId: string,
     area: string,
     existingTask?: Task,
@@ -98,6 +99,7 @@ export class TasksService {
       this.logger.log(`[ASSIGN] Creating new task`);
       savedTask = await this.taskModel.create({
         binId,
+        binAddress,
         assignedCleanerId: selectedCleaner._id,
         status: 'PENDING',
         rejectedBy: [],
@@ -107,10 +109,11 @@ export class TasksService {
 
     if (selectedCleaner.telegramChatId) {
       const message =
-        `🚨 *New Task Alert* 🚨\n\n` +
-        `A bin in your area (${area}) is full and needs cleaning.\n` +
-        `Bin ID: ${binId}\n` +
-        `Please check your app for details.`;
+        `សូមជូនដំណឹងដល់បុគ្គលទាំងអស់\n\n` +
+        `♻️ ធុងសំរាមនៅក្នុងតំបន់ (${area}) ជិតពេញហើយត្រូវការបុគ្គលទៅយកជាបន្ទាន់\n` +
+        `តំបន់: ${binAddress}\n` +
+        `សូមចុច Accept ដើម្បីទទួលភារកិច្ច ឬ Reject ប្រសិនបើមិនអាចទៅបាន\n\n` +
+        `សូមអរគុណ ចំពោះការសហការរបស់អ្នក`;
 
       this.logger.log(
         `[ASSIGN] Sending Telegram alert to cleaner ${selectedCleaner._id}`,
@@ -120,12 +123,10 @@ export class TasksService {
         message,
         savedTask._id.toString(),
       );
-      this.logger.log(
-        `[ASSIGN] ✅ Alert sent to cleaner ${selectedCleaner.name}`,
-      );
+      this.logger.log(`Alert sent to cleaner ${selectedCleaner.name}`);
     } else {
       this.logger.warn(
-        `[ASSIGN] Cleaner ${selectedCleaner._id} has no Telegram chat ID`,
+        `Cleaner ${selectedCleaner._id} has no Telegram chat ID`,
       );
     }
 
@@ -221,6 +222,7 @@ export class TasksService {
       );
 
       const newTask = await this.assignTaskToRandomCleaner(
+        bin.binCode,
         binId,
         bin.area.en,
         updatedTask,
@@ -250,7 +252,7 @@ export class TasksService {
       }
 
       this.logger.log(
-        `[REJECT] ✅ Task ${taskId} successfully reassigned to cleaner ${newTask.assignedCleanerId}`,
+        `[REJECT] Task ${taskId} successfully reassigned to cleaner ${newTask.assignedCleanerId}`,
       );
       this.logger.log(`========== REJECT TASK SUCCESS: ${taskId} ==========`);
       return newTask;
@@ -337,6 +339,7 @@ export class TasksService {
 
       // Try to assign to a new cleaner with fresh list
       const newTask = await this.assignTaskToRandomCleaner(
+        bin.binCode,
         bin._id.toString(),
         bin.area.en,
         resetTask,
@@ -344,7 +347,7 @@ export class TasksService {
 
       if (newTask) {
         this.logger.log(
-          `[RE-ALERT] ✅ Successfully re-assigned task to cleaner ${newTask.assignedCleanerId}`,
+          `[RE-ALERT] Successfully re-assigned task to cleaner ${newTask.assignedCleanerId}`,
         );
       } else {
         this.logger.warn(
