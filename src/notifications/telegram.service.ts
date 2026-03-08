@@ -66,7 +66,7 @@ export class TelegramService implements OnModuleInit {
           // Update the message to remove buttons
           await this.bot.editMessageText(
             `✅ ភារកិច្ចត្រូវបានទទួលយក! អ្នកត្រូវបានចាត់តាំងឱ្យទៅយកធុងសំរាមនេះ។` +
-              `${binDetails}\n\nសូមអរគុណ ចំពោះការសហការរបស់អ្នក!👋🏻`,
+              `${binDetails}\nសូមអរគុណ ចំពោះការសហការរបស់អ្នក!👋🏻`,
             {
               chat_id: chatId,
               message_id: message.message_id,
