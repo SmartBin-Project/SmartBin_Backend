@@ -46,12 +46,27 @@ export class TelegramService implements OnModuleInit {
 
       try {
         if (action === 'pick') {
-          await this.tasksService.acceptTask(taskId);
+          const updatedTask = await this.tasksService.acceptTask(taskId);
+
+          // Fetch bin details to display to the cleaner
+          const task = await this.tasksService.findById(taskId);
+          let binDetails = '';
+          if (task && task.binId) {
+            const bin = await this.tasksService.getBinDetails(
+              task.binId.toString(),
+            );
+            if (bin) {
+              binDetails =
+                `\n\n📍 ទីតាំងដែលអ្នកត្រូវទៅយក:\n` +
+                `ទីតាំង៖ ${bin.area?.kh || 'N/A'}\n` +
+                `Location: ${bin.area?.en || 'N/A'}\n`;
+            }
+          }
 
           // Update the message to remove buttons
           await this.bot.editMessageText(
-            `ភារកិច្ចត្រូវបានទទួលយក! អ្នកត្រូវបានចាត់តាំងឱ្យទៅធុងសំរាមនេះ។` +
-              `សូមអរគុណ ចំពោះការសហការរបស់អ្នក!👋🏻`,
+            `✅ ភារកិច្ចត្រូវបានទទួលយក! អ្នកត្រូវបានចាត់តាំងឱ្យទៅធុងសំរាមនេះ។` +
+              `${binDetails}\n\nសូមអរគុណ ចំពោះការសហការរបស់អ្នក!👋🏻`,
             {
               chat_id: chatId,
               message_id: message.message_id,

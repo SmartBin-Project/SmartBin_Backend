@@ -138,6 +138,10 @@ export class TasksService {
     return this.taskModel.findById(id);
   }
 
+  async getBinDetails(binId: string) {
+    return this.binsService.findById(binId);
+  }
+
   // 2. Cleaner Accepts Task
   async acceptTask(taskId: string) {
     const task = await this.taskModel.findById(taskId);
